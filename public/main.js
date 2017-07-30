@@ -3,7 +3,7 @@ $(function(){
 var $window = $(window);
 var $usernameInput = $('.usernameInput'); // Input for username
 
-var game = new Phaser.Game(1920, 1080, Phaser.AUTO, 'gameContainer', { preload: preload, create: create, update: update });
+var game = new Phaser.Game(960, 540, Phaser.AUTO, 'gameContainer', { preload: preload, create: create, update: update });
 var cardKeys = [];
 
 function preload() {
@@ -27,12 +27,15 @@ function preload() {
 
 function create() {
  var bg = game.add.sprite(0, 0, 'bg');
+ bg.inputEnabled = true;
+ bg.events.onInputDown.add(doSomething, this);
+ bg.events.onInputUp.add(doSomething, this);
 
  for(var i=0; i<cardKeys.length; i++)
   {
     var cardKey = cardKeys[i];
     var sprite = game.add.sprite(i*2, i*2, cardKey);
-    sprite.scale.setTo(.18, .18);
+    sprite.scale.setTo(.12, .12);
     sprite.smoothed = true;
     sprite.cacheAsBitmap = true;
 
@@ -40,9 +43,24 @@ function create() {
     sprite.input.enableDrag(true, true, false, 255, null, bg);
     //sprite.input.enableSnap(46, 65, true);
 
+    //draw a rectangle
+    var graphics = game.add.graphics(100, 100);
+    graphics.beginFill(0xFF3300);
+    graphics.lineStyle(2, 0x0000FF, 1);
+    graphics.drawRect(50, 250, 100, 100);
+    window.graphics = graphics;
+    
+    
+
+
 
   }
 
+  function doSomething() {
+
+    console.log('mouse is doing something');
+
+  }
 
 }
 
