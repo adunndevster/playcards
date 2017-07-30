@@ -148,6 +148,7 @@ ul {
   width: 100%;
 }
 
-#cvsGame{
+#gameContainer{
   width:100%;
+  height: 100%;
 }

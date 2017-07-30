@@ -83,9 +83,38 @@ io.on('connection', function (socket) {
 
 
 
+//generate card array
+const cardsFolder = './public/decks/classic/';
+const fs = require('fs');
+var cardsobj = {
+  bg: '',
+  cards: []
+}
 
 
 
+//bg
+fs.readdir(cardsFolder + "bg/", (err, files) => {
+  cardsobj.bg = '/bg/' + files[0];
+});
+
+//cards
+fs.readdir(cardsFolder, (err, files) => {
+  files.forEach(file => {
+    if(file.indexOf('.png')>-1)
+    {
+      cardsobj.cards.push(file);
+    }
+    
+  });
+
+  console.log(cardsobj);
+});
+
+
+
+
+//obj examples
 var card = {
   image:"Jack-1.png",
   rotation: 23,

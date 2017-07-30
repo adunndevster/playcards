@@ -2,25 +2,52 @@ $(function(){
 
 var $window = $(window);
 var $usernameInput = $('.usernameInput'); // Input for username
-var c=document.getElementById("cvsGame");
-var context=c.getContext("2d");
 
-window.onload = function() {
+var game = new Phaser.Game(1920, 1080, Phaser.AUTO, 'gameContainer', { preload: preload, create: create, update: update });
+var cardKeys = [];
 
-  var stage = new createjs.Stage("cvsGame");
+function preload() {
+  game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+  game.scale.setMinMax(400, 225, 1920, 1080);
 
-  var queue = new createjs.LoadQueue();
-  queue.on("complete", function(event) {
-      var image = queue.getResult("image");
-      var bmp = new createjs.Bitmap(image);
-      // Do stuff with bitmap
-      stage.addChild(bmp);
-      stage.update();
+  var basePath = '/decks/classic/';
+  
+
+  //bg
+  game.load.image('bg', basePath + cardPaths.bg);
+
+  //now get all of the cards...
+  cardPaths.cards.forEach(file => {
+    var imgKey = file.replace('.png', '');
+    cardKeys.push(imgKey);
+    game.load.image(imgKey, basePath + file);
   });
-  queue.loadFile({src:"/decks/classic/bg/bg.png", id:"image"});
+  
+}
+
+function create() {
+ var bg = game.add.sprite(0, 0, 'bg');
+
+ for(var i=0; i<cardKeys.length; i++)
+  {
+    var cardKey = cardKeys[i];
+    var sprite = game.add.sprite(i*2, i*2, cardKey);
+    sprite.scale.setTo(.18, .18);
+    sprite.smoothed = true;
+    sprite.cacheAsBitmap = true;
+
+    sprite.inputEnabled = true;
+    sprite.input.enableDrag(true, true, false, 255, null, bg);
+    //sprite.input.enableSnap(46, 65, true);
 
 
-};
+  }
+
+
+}
+
+function update() {
+}
 
 
 // var FADE_TIME = 150; // ms
@@ -33,7 +60,7 @@ window.onload = function() {
 
 
   var $loginPage = $('.login.page'); // The login page
-  var $gamePage = $('.game.page'); // The chatroom page
+  var $gamePage = $('.game.page'); // The game page
 
   // Prompt for setting a username
   var username;
@@ -242,9 +269,9 @@ window.onload = function() {
     connected = true;
     // Display the welcome message
     var message = "Welcome to Socket.IO Chat – ";
-    log(message, {
-      prepend: true
-    });
+    // log(message, {
+    //   prepend: true
+    // });
     addParticipantsMessage(data);
   });
 
