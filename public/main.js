@@ -61,10 +61,10 @@ function create() {
     if(!rectMouseDown) return;
 
     if(rect) rect.destroy();
-    rect = game.add.graphics(100, 100);
+    rect = game.add.graphics(0, 0);
     rect.beginFill(0xFFFFFF, .30);
     rect.lineStyle(1, 0xFFFFFF, .7);
-    var width = x - rectStartPoint.x;
+    var width = (x - rectStartPoint.x);
     var height = y - rectStartPoint.y;
     rect.drawRect(rectStartPoint.x, rectStartPoint.y, width, height);
     window.graphics = rect;
