@@ -5,6 +5,9 @@ var $usernameInput = $('.usernameInput'); // Input for username
 
 var game = new Phaser.Game(960, 540, Phaser.AUTO, 'gameContainer', { preload: preload, create: create, update: update });
 var cardKeys = [];
+var rect; //The drag selection rectangle.
+var rectStartPoint = new Phaser.Point(0,0);
+var rectMouseDown = false;
 
 function preload() {
   game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
@@ -28,9 +31,10 @@ function preload() {
 function create() {
  var bg = game.add.sprite(0, 0, 'bg');
  bg.inputEnabled = true;
- bg.events.onInputDown.add(doSomething, this);
- bg.events.onInputUp.add(doSomething, this);
-
+ bg.events.onInputDown.add(bg_Mouse_Down, this);
+ game.input.addMoveCallback(bg_Mouse_Move, this);
+ bg.events.onInputUp.add(bg_Mouse_Up, this);
+  
  for(var i=0; i<cardKeys.length; i++)
   {
     var cardKey = cardKeys[i];
@@ -43,25 +47,34 @@ function create() {
     sprite.input.enableDrag(true, true, false, 255, null, bg);
     //sprite.input.enableSnap(46, 65, true);
 
-    //draw a rectangle
-    var graphics = game.add.graphics(100, 100);
-    graphics.beginFill(0xFF3300);
-    graphics.lineStyle(2, 0x0000FF, 1);
-    graphics.drawRect(50, 250, 100, 100);
-    window.graphics = graphics;
-    
-    
+  }
 
+  //DRAGGING SELECTION///////////////////
+  function bg_Mouse_Down() {
 
+    rectStartPoint = new Phaser.Point(game.input.x,game.input.y);
+    rectMouseDown = true;
 
   }
 
-  function doSomething() {
+  function bg_Mouse_Move(pointer, x, y){
+    if(!rectMouseDown) return;
 
-    console.log('mouse is doing something');
-
+    if(rect) rect.destroy();
+    rect = game.add.graphics(100, 100);
+    rect.beginFill(0xFFFFFF, .30);
+    rect.lineStyle(1, 0xFFFFFF, .7);
+    var width = x - rectStartPoint.x;
+    var height = y - rectStartPoint.y;
+    rect.drawRect(rectStartPoint.x, rectStartPoint.y, width, height);
+    window.graphics = rect;
   }
 
+}
+
+function bg_Mouse_Up(){
+  rectMouseDown = false;
+  if(rect) rect.destroy();
 }
 
 function update() {
