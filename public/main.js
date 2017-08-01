@@ -8,6 +8,7 @@ var cardKeys = [];
 var rect; //The drag selection rectangle.
 var rectStartPoint = new Phaser.Point(0,0);
 var rectMouseDown = false;
+var tableGroup;
 
 function preload() {
   game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
@@ -34,14 +35,16 @@ function create() {
  bg.events.onInputDown.add(bg_Mouse_Down, this);
  game.input.addMoveCallback(bg_Mouse_Move, this);
  bg.events.onInputUp.add(bg_Mouse_Up, this);
+ bg.cacheAsBitmap = true;
+ bg.smoothed = true;
   
+ tableGroup = game.add.group();
  for(var i=0; i<cardKeys.length; i++)
   {
     var cardKey = cardKeys[i];
     var sprite = game.add.sprite(i*2, i*2, cardKey);
+    tableGroup.add(sprite);
     sprite.scale.setTo(.12, .12);
-    sprite.smoothed = true;
-    sprite.cacheAsBitmap = true;
 
     sprite.inputEnabled = true;
     sprite.input.enableDrag(true, true, false, 255, null, bg);
@@ -49,12 +52,14 @@ function create() {
 
   }
 
-  //DRAGGING SELECTION///////////////////
+}
+
+
+//DRAGGING SELECTION///////////////////
   function bg_Mouse_Down() {
 
     rectStartPoint = new Phaser.Point(game.input.x,game.input.y);
     rectMouseDown = true;
-
   }
 
   function bg_Mouse_Move(pointer, x, y){
@@ -68,12 +73,21 @@ function create() {
     var height = y - rectStartPoint.y;
     rect.drawRect(rectStartPoint.x, rectStartPoint.y, width, height);
     window.graphics = rect;
+
+    //check to see which sprites the rect overlaps
+    //do I really have to loop through every card on the table?
+    tableGroup.forEach(function(sprite){
+        if(sprite.overlap(rect))
+          {
+            sprite.scale.setTo(.08, .08);
+          } else {
+            sprite.scale.setTo(.12, .12);
+          }
+    } );
   }
 
-}
-
 function bg_Mouse_Up(){
-  rectMouseDown = false;
+  rectMouseDown = false;;
   if(rect) rect.destroy();
 }
 
