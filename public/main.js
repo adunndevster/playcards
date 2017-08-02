@@ -44,10 +44,11 @@ function create() {
     var cardKey = cardKeys[i];
     var sprite = game.add.sprite(i*2, i*2, cardKey);
     tableGroup.add(sprite);
+    sprite.anchor = new Phaser.Point(.5, .5);
     sprite.scale.setTo(.12, .12);
 
     sprite.inputEnabled = true;
-    sprite.input.enableDrag(true, true, false, 255, null, bg);
+    sprite.input.enableDrag(false, true, false, 255, null, bg);
     //sprite.input.enableSnap(46, 65, true);
 
   }
@@ -79,15 +80,27 @@ function create() {
     tableGroup.forEach(function(sprite){
         if(sprite.overlap(rect))
           {
-            sprite.scale.setTo(.08, .08);
+            sprite.tint = 0xffdd00;
           } else {
+            sprite.tint = 0xffffff;
             sprite.scale.setTo(.12, .12);
+            game.tweens.remove(sprite.colorFlash);
           }
     } );
   }
 
 function bg_Mouse_Up(){
-  rectMouseDown = false;;
+  rectMouseDown = false;
+
+  tableGroup.forEach(function(sprite){
+        if(sprite.overlap(rect))
+          {
+            sprite.colorFlash = game.add.tween(sprite).to( { tint: 0xffdd00, height: sprite.height*.92, width:sprite.width*.92}, 250, "Sine", true, 0, -1, true);
+          } else {
+            sprite.tint = 0xffffff;
+          }
+    } );
+
   if(rect) rect.destroy();
 }
 
