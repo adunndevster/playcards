@@ -313,11 +313,11 @@ function update() {
   socket.on('login', function (data) {
     connected = true;
     // Display the welcome message
-    var message = "Welcome to Socket.IO Chat – ";
+    var message = "Welcome to Play Cards – ";
     // log(message, {
     //   prepend: true
     // });
-    addParticipantsMessage(data);
+    //addParticipantsMessage(data);
   });
 
   // Whenever the server emits 'new message', update the chat body
