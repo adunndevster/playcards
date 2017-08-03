@@ -4,11 +4,14 @@ var $window = $(window);
 var $usernameInput = $('.usernameInput'); // Input for username
 
 var game = new Phaser.Game(960, 540, Phaser.AUTO, 'gameContainer', { preload: preload, create: create, update: update });
+var bg;
 var cardKeys = [];
 var rect; //The drag selection rectangle.
 var rectStartPoint = new Phaser.Point(0,0);
 var rectMouseDown = false;
 var tableGroup;
+var dragGroup;
+var dragArray = [];
 
 function preload() {
   game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
@@ -30,7 +33,7 @@ function preload() {
 }
 
 function create() {
- var bg = game.add.sprite(0, 0, 'bg');
+ bg = game.add.sprite(0, 0, 'bg');
  bg.inputEnabled = true;
  bg.events.onInputDown.add(bg_Mouse_Down, this);
  game.input.addMoveCallback(bg_Mouse_Move, this);
@@ -39,6 +42,7 @@ function create() {
  bg.smoothed = true;
   
  tableGroup = game.add.group();
+ dragGroup = game.add.group();
  for(var i=0; i<cardKeys.length; i++)
   {
     var cardKey = cardKeys[i];
@@ -51,8 +55,51 @@ function create() {
     sprite.input.enableDrag(false, true, false, 255, null, bg);
     //sprite.input.enableSnap(46, 65, true);
 
+    //  Drag events
+    sprite.events.onDragUpdate.add(dragUpdate);
+    sprite.events.onDragStop.add(dragStop);
   }
 
+}
+
+//CARD DRAG HANDLING//////////////////
+function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
+
+  thisSprite.input.enableDrag(false, false, false, 255, null, bg);
+  dragArray.forEach(function(sprite)
+  {
+    if(thisSprite != sprite)
+      {
+        if(sprite.dx === undefined) sprite.dx = dragX - sprite.x;
+        if(sprite.dy === undefined) sprite.dy = dragY - sprite.y;
+        sprite.x = dragX - sprite.dx;
+        sprite.y = dragY - sprite.dy;
+      }
+  });
+
+}
+
+function dragStop(thisSprite) {
+
+  
+  dragArray.forEach(function(sprite)
+  {
+    if(thisSprite != sprite)
+      {
+        sprite.dx = sprite.dy = undefined;
+      }
+  });
+
+}
+
+function update() {
+
+
+}
+
+function render() {
+
+ 
 }
 
 
@@ -74,7 +121,14 @@ function create() {
     var height = y - rectStartPoint.y;
     rect.drawRect(rectStartPoint.x, rectStartPoint.y, width, height);
     window.graphics = rect;
-
+    
+    dragArray.forEach(function(sprite){
+      tableGroup.add(sprite);
+      sprite.input.enableDrag(false, true, false, 255, null, bg);
+    });
+    dragArray = []; //reset the drag group.
+    
+    
     //check to see which sprites the rect overlaps
     //do I really have to loop through every card on the table?
     tableGroup.forEach(function(sprite){
@@ -87,6 +141,7 @@ function create() {
             game.tweens.remove(sprite.colorFlash);
           }
     } );
+
   }
 
 function bg_Mouse_Up(){
@@ -95,11 +150,17 @@ function bg_Mouse_Up(){
   tableGroup.forEach(function(sprite){
         if(sprite.overlap(rect))
           {
-            sprite.colorFlash = game.add.tween(sprite).to( { tint: 0xffdd00, height: sprite.height*.92, width:sprite.width*.92}, 250, "Sine", true, 0, -1, true);
+            dragArray.push(sprite);
+            
           } else {
             sprite.tint = 0xffffff;
           }
     } );
+
+    dragArray.forEach(function(sprite){
+      dragGroup.add(sprite);
+      sprite.colorFlash = game.add.tween(sprite).to( { tint: 0xffdd00, height: sprite.height*.92, width:sprite.width*.92}, 250, "Sine", true, 0, -1, true);
+    });
 
   if(rect) rect.destroy();
 }
