@@ -6,9 +6,11 @@ var $usernameInput = $('.usernameInput'); // Input for username
 var game = new Phaser.Game(960, 540, Phaser.AUTO, 'gameContainer', { preload: preload, create: create, update: update });
 var bg;
 var cardKeys = [];
-var rect; //The drag selection rectangle.
+var cardSelectionRect; //The drag selection rectangle.
 var rectStartPoint = new Phaser.Point(0,0);
 var rectMouseDown = false;
+var cardSelectionPosition;
+var selectionDidChangePosition = false;
 var tableGroup;
 var dragGroup;
 var dragArray = [];
@@ -65,6 +67,13 @@ function create() {
 //CARD DRAG HANDLING//////////////////
 function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
 
+  //if the sprite being dragged isn't in the card selection, just return.
+  if(dragArray.indexOf(thisSprite) == -1)
+  {
+    resetCardSelection();
+    return;
+  } 
+
   thisSprite.input.enableDrag(false, false, false, 255, null, bg);
   dragArray.forEach(function(sprite)
   {
@@ -90,6 +99,13 @@ function dragStop(thisSprite) {
       }
   });
 
+  if(dragArray.length > 0)
+  {
+    selectionDidChangePosition = (cardSelectionPosition.x - dragArray[0].x != 0) || (cardSelectionPosition.y - dragArray[0].y != 0);
+  } else {
+    console.log(username + " moved one card to a new position"); //TODO:SERVER
+  }
+
 }
 
 function update() {
@@ -104,35 +120,68 @@ function render() {
 
 
 //DRAGGING SELECTION///////////////////
-  function bg_Mouse_Down() {
+  function bg_Mouse_Down(pointer, x, y) {
 
     rectStartPoint = new Phaser.Point(game.input.x,game.input.y);
     rectMouseDown = true;
+
+    resetCardSelection();
+    
+    drawCardSelectionRect(x, y);
+
   }
 
   function bg_Mouse_Move(pointer, x, y){
     if(!rectMouseDown) return;
 
-    if(rect) rect.destroy();
-    rect = game.add.graphics(0, 0);
-    rect.beginFill(0xFFFFFF, .30);
-    rect.lineStyle(1, 0xFFFFFF, .7);
-    var width = (x - rectStartPoint.x);
-    var height = y - rectStartPoint.y;
-    rect.drawRect(rectStartPoint.x, rectStartPoint.y, width, height);
-    window.graphics = rect;
+    drawCardSelectionRect(x, y);
+
+    //check to see which sprites the rect overlaps
+    //do I really have to loop through every card on the table?
+    doCardSelection();
     
+  }
+
+  function drawCardSelectionRect(x, y)
+  {
+    if(cardSelectionRect) cardSelectionRect.destroy();
+    cardSelectionRect = game.add.graphics(0, 0);
+    cardSelectionRect.beginFill(0xFFFFFF, .30);
+    cardSelectionRect.lineStyle(1, 0xFFFFFF, .7);
+    var width = x - rectStartPoint.x + 1;
+    var height = y - rectStartPoint.y + 1;
+    cardSelectionRect.drawRect(rectStartPoint.x, rectStartPoint.y, width, height);
+    window.graphics = cardSelectionRect;
+  }
+
+  //resets the drag array
+  function resetCardSelection()
+  {
+    if(dragArray.length == 0) return;
+
     dragArray.forEach(function(sprite){
       tableGroup.add(sprite);
       sprite.input.enableDrag(false, true, false, 255, null, bg);
     });
     dragArray = []; //reset the drag group.
-    
-    
-    //check to see which sprites the rect overlaps
-    //do I really have to loop through every card on the table?
+
+    doCardSelection();
+
+    //tell the server that the cards can be unlocked for everyone :).
+    console.log("reseting " + username + "'s selection"); //TODO:SERVER
+
+    //did they actually move the cards?
+    if(selectionDidChangePosition) console.log(username + " moved the card(s) to a new position"); //TODO:SERVER
+
+
+    selectionDidChangePosition = undefined;
+    cardSelectionPosition = undefined;
+  }
+
+  function doCardSelection()
+  {
     tableGroup.forEach(function(sprite){
-        if(sprite.overlap(rect))
+        if(cardSelectionRect != undefined && sprite.overlap(cardSelectionRect))
           {
             sprite.tint = 0xffdd00;
           } else {
@@ -141,28 +190,40 @@ function render() {
             game.tweens.remove(sprite.colorFlash);
           }
     } );
-
   }
 
 function bg_Mouse_Up(){
   rectMouseDown = false;
 
+  if(cardSelectionRect === undefined) return;
+
   tableGroup.forEach(function(sprite){
-        if(sprite.overlap(rect))
-          {
-            dragArray.push(sprite);
-            
-          } else {
-            sprite.tint = 0xffffff;
-          }
-    } );
+      if(sprite.overlap(cardSelectionRect))
+      {
+        dragArray.push(sprite);
+        
+      } else {
+        sprite.tint = 0xffffff;
+      }
+  } );
 
-    dragArray.forEach(function(sprite){
-      dragGroup.add(sprite);
-      sprite.colorFlash = game.add.tween(sprite).to( { tint: 0xffdd00, height: sprite.height*.92, width:sprite.width*.92}, 250, "Sine", true, 0, -1, true);
-    });
+  dragArray.forEach(function(sprite){
+    dragGroup.add(sprite);
+    sprite.colorFlash = game.add.tween(sprite).to( { tint: 0xffdd00, height: sprite.height*.92, width:sprite.width*.92}, 250, "Sine", true, 0, -1, true);
+  });
 
-  if(rect) rect.destroy();
+  if(cardSelectionRect)
+  {
+    cardSelectionRect.destroy();
+    cardSelectionRect = undefined;
+  } 
+
+  //if we have selected some cards, time to tell the Server.
+  if(dragArray.length > 0)
+  {
+    cardSelectionPosition = new Phaser.Point(dragArray[0].x, dragArray[0].y); //track the first cards position to see if it ever changes.
+   console.log(username + " selected some cards."); //TODO:SERVER 
+  }
 }
 
 function update() {
@@ -203,7 +264,7 @@ function update() {
   // Sets the client's username
   function setUsername () {
     username = cleanInput($usernameInput.val().trim());
-
+    
     // If the username is valid
     if (username) {
       $loginPage.fadeOut();
@@ -388,53 +449,38 @@ function update() {
     connected = true;
     // Display the welcome message
     var message = "Welcome to Play Cards – ";
+    console.log(message);
     // log(message, {
     //   prepend: true
     // });
     //addParticipantsMessage(data);
   });
 
-  // Whenever the server emits 'new message', update the chat body
-  socket.on('new message', function (data) {
-    addChatMessage(data);
-  });
 
   // Whenever the server emits 'user joined', log it in the chat body
   socket.on('user joined', function (data) {
-    log(data.username + ' joined');
-    addParticipantsMessage(data);
+    console.log(data.username + ' joined');
   });
 
   // Whenever the server emits 'user left', log it in the chat body
   socket.on('user left', function (data) {
-    log(data.username + ' left');
-    addParticipantsMessage(data);
-    removeChatTyping(data);
+    console.log(data.username + ' left');
   });
 
-  // Whenever the server emits 'typing', show the typing message
-  socket.on('typing', function (data) {
-    addChatTyping(data);
-  });
-
-  // Whenever the server emits 'stop typing', kill the typing message
-  socket.on('stop typing', function (data) {
-    removeChatTyping(data);
-  });
 
   socket.on('disconnect', function () {
-    log('you have been disconnected');
+    console.log('you have been disconnected');
   });
 
   socket.on('reconnect', function () {
-    log('you have been reconnected');
+    console.log('you have been reconnected');
     if (username) {
       socket.emit('add user', username);
     }
   });
 
   socket.on('reconnect_error', function () {
-    log('attempt to reconnect has failed');
+    console.log('attempt to reconnect has failed');
   });
 
 });
