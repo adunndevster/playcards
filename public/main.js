@@ -3,7 +3,7 @@ $(function(){
 var $window = $(window);
 var $usernameInput = $('.usernameInput'); // Input for username
 
-var game = new Phaser.Game(960, 540, Phaser.AUTO, 'gameContainer', { preload: preload, create: create, update: update });
+var game = new Phaser.Game(960, 540, Phaser.CANVAS, 'gameContainer', { preload: preload, create: create, update: update });
 var bg;
 var cardKeys = [];
 var cardSelectionRect; //The drag selection rectangle.
