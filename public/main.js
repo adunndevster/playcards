@@ -83,7 +83,7 @@ function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
 
   //HACK - ensure the dragged card(s) are on top
   dragGroup = game.add.group();
-  if(dragArray.length == 0) dragGroup.add(thisSprite);
+  if(dragArray.length == 0 && !handGroup.children.includes(thisSprite)) dragGroup.add(thisSprite);
   
   //is the dragged card over the hand area?
   if(thisSprite.overlap(handArea))
@@ -116,7 +116,9 @@ function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
 
 function dragStop(thisSprite) {
 
-  
+  //HACK - ensure the dragged card(s) are on top
+  if(dragArray.length == 0  && !handGroup.children.includes(thisSprite)) tableGroup.add(thisSprite);
+
   //is the dragged card over the hand area?
   if(thisSprite.overlap(handArea))
   {
@@ -193,12 +195,9 @@ function render() {
     if(dragArray.length == 0) return;
 
     dragArray.forEach(function(sprite){
-      tableGroup.add(sprite);
+      if(!handGroup.children.includes(sprite)) tableGroup.add(sprite);
+      
       sprite.input.enableDrag(false, true, false, 255, null, bg);
-      sprite.tint = 0xffffff;
-      sprite.scale.setTo(.12, .12);
-      game.tweens.remove(sprite.colorFlash);
-    
       sprite.dx = sprite.dy = undefined;
     });
     dragArray = []; //reset the drag group.
@@ -309,11 +308,13 @@ function arrangeCardsInHand()
 function removeCardFromHand(thisSprite)
 {
 
-  if(thisSprite.parent !== handGroup) return;
+  if(!handGroup.children.includes(thisSprite)) return;
 
   tableGroup.add(thisSprite);
   thisSprite.scale.setTo(.12, .12);
 
+  arrangeCardsInHand();
+  
   console.log('card TAKEN FROM hand area');
 
   //TODO:SERVER
