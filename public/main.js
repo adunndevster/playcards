@@ -4,7 +4,7 @@ var $window = $(window);
 var $usernameInput = $('.usernameInput'); // Input for username
 
 var game = new Phaser.Game(960, 540, Phaser.CANVAS, 'gameContainer', { preload: preload, create: create, update: update });
-var bg;
+var bg, handArea;
 var cardKeys = [];
 var cardSelectionRect; //The drag selection rectangle.
 var rectStartPoint = new Phaser.Point(0,0);
@@ -14,6 +14,7 @@ var selectionDidChangePosition = false;
 var tableGroup;
 var dragGroup;
 var dragArray = [];
+var handGroup;
 
 function preload() {
   game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
@@ -21,9 +22,11 @@ function preload() {
 
   var basePath = '/decks/classic/';
   
-
   //bg
   game.load.image('bg', basePath + cardPaths.bg);
+
+  //hand hit area
+  game.load.image('hitArea', 'images/hitArea.png');
 
   //now get all of the cards...
   cardPaths.cards.forEach(file => {
@@ -43,8 +46,19 @@ function create() {
  bg.cacheAsBitmap = true;
  bg.smoothed = true;
   
+//hand area
+handArea = game.add.sprite(0, 0, 'hitArea');
+handArea.width = bg.width;
+handArea.height = 40;
+handArea.inputEnabled = true;
+handArea.input.useHandCursor = true;
+handArea.x = bg.width/2 - handArea.width  /2;
+handArea.y = bg.height - handArea.height;
+
  tableGroup = game.add.group();
+ handGroup = game.add.group();
  dragGroup = game.add.group();
+
  for(var i=0; i<cardKeys.length; i++)
   {
     var cardKey = cardKeys[i];
@@ -67,7 +81,17 @@ function create() {
 //CARD DRAG HANDLING//////////////////
 function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
 
-  //if the sprite being dragged isn't in the card selection, just return.
+  //HACK - ensure the dragged card(s) are on top
+  dragGroup = game.add.group();
+  if(dragArray.length == 0) dragGroup.add(thisSprite);
+  
+  //is the dragged card over the hand area?
+  if(thisSprite.overlap(handArea))
+  {
+    console.log('card(s) over hand area');
+  }
+
+  //if the sprite being dragged isn't in the card selection
   if(dragArray.indexOf(thisSprite) == -1)
   {
     resetCardSelection();
@@ -86,11 +110,21 @@ function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
       }
   });
 
+  
+
 }
 
 function dragStop(thisSprite) {
 
   
+  //is the dragged card over the hand area?
+  if(thisSprite.overlap(handArea))
+  {
+    addCardsToHand(thisSprite);
+  } else {
+    removeCardFromHand(thisSprite);
+  }
+
   dragArray.forEach(function(sprite)
   {
     if(thisSprite != sprite)
@@ -137,7 +171,6 @@ function render() {
     drawCardSelectionRect(x, y);
 
     //check to see which sprites the rect overlaps
-    //do I really have to loop through every card on the table?
     doCardSelection();
     
   }
@@ -155,13 +188,18 @@ function render() {
   }
 
   //resets the drag array
-  function resetCardSelection()
+  function resetCardSelection(group)
   {
     if(dragArray.length == 0) return;
 
     dragArray.forEach(function(sprite){
       tableGroup.add(sprite);
       sprite.input.enableDrag(false, true, false, 255, null, bg);
+      sprite.tint = 0xffffff;
+      sprite.scale.setTo(.12, .12);
+      game.tweens.remove(sprite.colorFlash);
+    
+      sprite.dx = sprite.dy = undefined;
     });
     dragArray = []; //reset the drag group.
 
@@ -226,7 +264,60 @@ function bg_Mouse_Up(){
   }
 }
 
-function update() {
+//THE HAND OF CARDS///////////////
+function addCardsToHand(thisSprite)
+{
+
+  if(dragArray.length > 0)
+  {
+    
+    dragArray.forEach(function(sprite){
+      handGroup.add(sprite);
+      sprite.input.enableDrag(false, true, false, 255, null, bg);
+      sprite.scale.setTo(.3, .3);
+      sprite.tint = 0xffffff;
+      game.tweens.remove(sprite.colorFlash);
+    });
+  } else {
+    console.log('card DROPPED over hand area');
+    handGroup.add(thisSprite);
+    thisSprite.input.enableDrag(false, true, false, 255, null, bg);
+    thisSprite.scale.setTo(.3, .3);
+  }
+  
+  //now arrange the cards in the hand from left to right...
+  arrangeCardsInHand();
+
+  resetCardSelection();
+
+  //TODO:SERVER
+}
+
+function arrangeCardsInHand()
+{
+  handGroup.sort('x', Phaser.Group.SORT_ASCENDING);
+  var gap = bg.width*.70 / handGroup.length;
+  if(gap > 30) gap = 30;
+  var counter = 0;
+  handGroup.forEach(function(sprite){
+    sprite.y = bg.height;
+    sprite.x = (counter * gap) + (bg.width/2)  - ((gap*handGroup.length)/2);
+    counter++;
+  });
+}
+
+function removeCardFromHand(thisSprite)
+{
+
+  if(thisSprite.parent !== handGroup) return;
+
+  tableGroup.add(thisSprite);
+  thisSprite.scale.setTo(.12, .12);
+
+  console.log('card TAKEN FROM hand area');
+
+  //TODO:SERVER
+
 }
 
 
