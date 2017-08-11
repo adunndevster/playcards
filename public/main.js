@@ -217,14 +217,19 @@ function render() {
 
   function doCardSelection()
   {
+    if(cardSelectionRect === undefined) return;
+
     tableGroup.forEach(function(sprite){
-        if(cardSelectionRect != undefined && sprite.overlap(cardSelectionRect))
+        if(sprite.overlap(cardSelectionRect))
           {
             sprite.tint = 0xffdd00;
           } else {
-            sprite.tint = 0xffffff;
-            sprite.scale.setTo(.12, .12);
-            game.tweens.remove(sprite.colorFlash);
+            if(sprite.tint != 0xffffff)
+            {
+              sprite.tint = 0xffffff;
+              sprite.scale.setTo(.12, .12);
+              game.tweens.remove(sprite.colorFlash);
+            }
           }
     } );
   }
