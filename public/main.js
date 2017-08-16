@@ -5,7 +5,7 @@ var $usernameInput = $('.usernameInput'); // Input for username
 
 var game = new Phaser.Game(960, 540, Phaser.CANVAS, 'gameContainer', { preload: preload, create: create, update: update });
 var bg, handArea;
-var cardKeys = [];
+var deckInfo = [];
 var cardSelectionRect; //The drag selection rectangle.
 var rectStartPoint = new Phaser.Point(0,0);
 var rectMouseDown = false;
@@ -28,11 +28,16 @@ function preload() {
   //hand hit area
   game.load.image('hitArea', 'images/hitArea.png');
 
+  //load the card back textures
   //now get all of the cards...
-  cardPaths.cards.forEach(file => {
-    var imgKey = file.replace('.png', '');
-    cardKeys.push(imgKey);
-    game.load.image(imgKey, basePath + file);
+  cardPaths.cardBacks.forEach(card => {
+    game.load.image(card.image.replace('.png', ''), basePath + card.image);
+  });
+
+  //now get all of the cards...
+  cardPaths.cards.forEach(card => {
+    deckInfo.push(card);
+    game.load.image(card.image.replace('.png', ''), basePath + card.image);
   });
   
 }
@@ -59,13 +64,14 @@ handArea.y = bg.height - handArea.height;
  handGroup = game.add.group();
  dragGroup = game.add.group();
 
- for(var i=0; i<cardKeys.length; i++)
+ for(var i=0; i<deckInfo.length; i++)
   {
-    var cardKey = cardKeys[i];
+    var cardKey = deckInfo[i].image.replace('.png', '');
     var sprite = game.add.sprite(i*2, i*2, cardKey);
     tableGroup.add(sprite);
     sprite.anchor = new Phaser.Point(.5, .5);
     sprite.scale.setTo(.12, .12);
+    sprite.back = deckInfo[i].back.replace('.png', '');
 
     sprite.inputEnabled = true;
     sprite.input.enableDrag(false, true, false, 255, null, bg);
@@ -210,6 +216,13 @@ function render() {
     //did they actually move the cards?
     if(selectionDidChangePosition) console.log(username + " moved the card(s) to a new position"); //TODO:SERVER
 
+    tableGroup.forEach(function(sprite){
+      if(sprite.tint != 0xffffff){
+        sprite.tint = 0xffffff;
+        sprite.scale.setTo(.12, .12);
+        game.tweens.remove(sprite.colorFlash);
+      }
+    });
 
     selectionDidChangePosition = undefined;
     cardSelectionPosition = undefined;
@@ -217,7 +230,10 @@ function render() {
 
   function doCardSelection()
   {
-    if(cardSelectionRect === undefined) return;
+    if(cardSelectionRect === undefined){
+      resetCardSelection();
+      return;
+    } 
 
     tableGroup.forEach(function(sprite){
         if(sprite.overlap(cardSelectionRect))

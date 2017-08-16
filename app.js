@@ -88,6 +88,7 @@ const cardsFolder = './public/decks/classic/';
 const fs = require('fs');
 var cardsobj = {
   bg: '',
+  cardBacks: [],
   cards: []
 }
 
@@ -99,11 +100,19 @@ fs.readdir(cardsFolder + "bg/", (err, files) => {
 });
 
 //cards
+//card back
+cardsobj.cardBacks.push({image: '/bg/card-back.png'});
+
+
+
 fs.readdir(cardsFolder, (err, files) => {
   files.forEach(file => {
     if(file.indexOf('.png')>-1)
     {
-      cardsobj.cards.push(file);
+      var card = new Object();
+      card.image = file;
+      card.back = "/bg/card-back.png";
+      cardsobj.cards.push(card);
     }
     
   });
@@ -117,6 +126,7 @@ fs.readdir(cardsFolder, (err, files) => {
 //obj examples
 var card = {
   image:"Jack-1.png",
+  back:"card-back.png",
   rotation: 23,
   x: 323,
   y: 174,
