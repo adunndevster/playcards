@@ -11,10 +11,8 @@ var rectStartPoint = new Phaser.Point(0,0);
 var rectMouseDown = false;
 var cardSelectionPosition;
 var selectionDidChangePosition = false;
-var tableGroup;
-var dragGroup;
+var tableGroup, dragGroup, handGroup, actionButtonGroup;
 var dragArray = [];
-var handGroup;
 
 function preload() {
   game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
@@ -27,6 +25,13 @@ function preload() {
 
   //hand hit area
   game.load.image('hitArea', 'images/hitArea.png');
+
+  //buttons
+  game.load.image('btnStagger', 'images/btnStagger.png');
+  game.load.image('btnShuffle', 'images/btnShuffle.png');
+  game.load.image('btnFlip', 'images/btnFlip.png');
+  game.load.image('btnDeckify', 'images/btnDeckify.png');
+  game.load.image('btnDeal', 'images/btnDeal.png');
 
   //load the card back textures
   //now get all of the cards...
@@ -63,6 +68,10 @@ handArea.y = bg.height - handArea.height;
  tableGroup = game.add.group();
  handGroup = game.add.group();
  dragGroup = game.add.group();
+ actionButtonGroup = game.add.group();
+
+ //action buttons
+addActionButtons();
 
  for(var i=0; i<deckInfo.length; i++)
   {
@@ -71,7 +80,10 @@ handArea.y = bg.height - handArea.height;
     tableGroup.add(sprite);
     sprite.anchor = new Phaser.Point(.5, .5);
     sprite.scale.setTo(.12, .12);
+    //added properties for this card game.
+    sprite.front = deckInfo[i].image.replace('.png', '');
     sprite.back = deckInfo[i].back.replace('.png', '');
+    sprite.isFaceUp = true;
 
     sprite.inputEnabled = true;
     sprite.input.enableDrag(false, true, false, 255, null, bg);
@@ -84,11 +96,129 @@ handArea.y = bg.height - handArea.height;
 
 }
 
+//ACTION BUTTONS/////////////////////
+function addActionButtons()
+{
+  const gap = 20;
+
+  var btnStagger = game.add.sprite(0, 0, 'btnStagger');
+  btnStagger.x = bg.width - btnStagger.width - gap;
+  btnStagger.y = gap;
+  btnStagger.inputEnabled = true;
+  btnStagger.events.onInputUp.add(btnStagger_Up);
+
+  var btnShuffle = game.add.sprite(0, 0, 'btnShuffle');
+  btnShuffle.x = bg.width - ((btnStagger.width + gap) * 2);
+  btnShuffle.y = gap;
+  btnShuffle.inputEnabled = true;
+  btnShuffle.events.onInputUp.add(btnShuffle_Up);
+
+  var btnFlip = game.add.sprite(0, 0, 'btnFlip');
+  btnFlip.x = bg.width - ((btnStagger.width + gap) * 3);
+  btnFlip.y = gap;
+  btnFlip.inputEnabled = true;
+  btnFlip.events.onInputUp.add(btnFlip_Up);
+
+  var btnDeckify = game.add.sprite(0, 0, 'btnDeckify');
+  btnDeckify.x = bg.width - ((btnStagger.width + gap) * 4);
+  btnDeckify.y = gap;
+  btnDeckify.inputEnabled = true;
+  btnDeckify.events.onInputUp.add(btnDeckify_Up);
+
+  var btnDeal = game.add.sprite(0, 0, 'btnDeal');
+  btnDeal.x = bg.width - ((btnStagger.width + gap) * 5);
+  btnDeal.y = gap;
+  btnDeal.inputEnabled = true;
+  btnDeal.events.onInputUp.add(btnDeal_Up);
+
+  actionButtonGroup.add(btnStagger);
+  actionButtonGroup.add(btnShuffle);
+  actionButtonGroup.add(btnFlip);
+  actionButtonGroup.add(btnDeckify);
+  actionButtonGroup.add(btnDeal);
+}
+
+function btnStagger_Up(){
+
+  deckify();
+
+  const heightArea = 150;
+  var gap = heightArea / dragArray.length;
+
+  var counter = 0;
+  dragArray.forEach(function(sprite)
+  {
+    game.add.tween(sprite).to( {y: sprite.y + (gap * counter)}, 250, "Sine", true, 0);
+    counter++;
+  });
+
+  //TODO:SERVER
+
+}
+
+function btnShuffle_Up(){
+  
+}
+
+function btnFlip_Up(){
+  dragArray.forEach(function(sprite)
+  {
+    flipCard(sprite);
+  });
+
+  //TODO:SERVER
+}
+
+function btnDeckify_Up(){
+  deckify();
+
+  //TODO:SERVER
+}
+function deckify()
+{
+  var midPointX = dragArray.reduce(function(sum, sprite) {
+    return sum + sprite.x;
+  }, 0) / dragGroup.length - (dragArray[0].width/2);
+
+  var midPointY = dragArray.reduce(function(sum, sprite) {
+    return sum + sprite.y;
+  }, 0) / dragGroup.length  - (dragArray[0].height/2);
+
+  var centerPoint = new Phaser.Point(midPointX + (dragGroup.width/2), midPointY + (dragGroup.height/2));
+  dragArray.forEach(function(sprite)
+  {
+    game.add.tween(sprite).to( { x: centerPoint.x, y: centerPoint.y}, 250, "Sine", true, 0);
+  });
+}
+
+function btnDeal_Up(){
+  
+}
+
+function flipCard(sprite)
+{
+  if(sprite.isFaceUp)
+  {
+    sprite.isFaceUp = false;
+    sprite.loadTexture(sprite.back);
+  } else {
+    sprite.isFaceUp = true;
+    sprite.loadTexture(sprite.front);
+  }
+}
+///////////////////////////////////////
+
+
+
+
+
+
+
 //CARD DRAG HANDLING//////////////////
 function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
 
   //HACK - ensure the dragged card(s) are on top
-  dragGroup = game.add.group();
+  //dragGroup = game.add.group();
   if(dragArray.length == 0 && !handGroup.children.includes(thisSprite)) dragGroup.add(thisSprite);
   
   //is the dragged card over the hand area?
