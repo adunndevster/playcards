@@ -146,18 +146,28 @@ function btnStagger_Up(){
   var gap = heightArea / dragArray.length;
 
   var counter = 0;
+  var minY = dragArray.sort(function (a, b) {
+    return a.y - b.y;
+    })[0].y;
   dragArray.forEach(function(sprite)
   {
-    game.add.tween(sprite).to( {y: sprite.y + (gap * counter)}, 250, "Sine", true, 0);
+    game.add.tween(sprite).to( {y: minY + (gap * counter)}, 250, "Sine", true, 0);
     counter++;
+
+    tableGroup.add(sprite);
+    dragGroup.add(sprite);
   });
 
+  
   //TODO:SERVER
 
 }
 
 function btnShuffle_Up(){
-  
+  deckify();
+  shuffle(dragArray);
+
+  //TODO:SERVER?
 }
 
 function btnFlip_Up(){
@@ -178,17 +188,33 @@ function deckify()
 {
   var midPointX = dragArray.reduce(function(sum, sprite) {
     return sum + sprite.x;
-  }, 0) / dragGroup.length - (dragArray[0].width/2);
+  }, 0) / dragGroup.length;
 
   var midPointY = dragArray.reduce(function(sum, sprite) {
     return sum + sprite.y;
-  }, 0) / dragGroup.length  - (dragArray[0].height/2);
+  }, 0) / dragGroup.length;
 
-  var centerPoint = new Phaser.Point(midPointX + (dragGroup.width/2), midPointY + (dragGroup.height/2));
+  var centerPoint = new Phaser.Point(midPointX, midPointY);
   dragArray.forEach(function(sprite)
   {
     game.add.tween(sprite).to( { x: centerPoint.x, y: centerPoint.y}, 250, "Sine", true, 0);
   });
+}
+
+//thanks Fisher-Yates!
+function shuffle (array) {
+  var i = 0
+    , j = 0
+    , temp = null;
+
+  for (i = array.length - 1; i > 0; i -= 1) {
+    j = Math.floor(Math.random() * (i + 1));
+    temp = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+    tableGroup.add(array[j]);
+    dragGroup.add(array[j]);
+  }
 }
 
 function btnDeal_Up(){
@@ -357,6 +383,7 @@ function render() {
     selectionDidChangePosition = undefined;
     cardSelectionPosition = undefined;
   }
+
 
   function doCardSelection()
   {
