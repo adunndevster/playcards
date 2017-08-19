@@ -5,6 +5,7 @@ var $usernameInput = $('.usernameInput'); // Input for username
 
 var game = new Phaser.Game(960, 540, Phaser.CANVAS, 'gameContainer', { preload: preload, create: create, update: update });
 var bg, handArea;
+const CARD_SCALE = .22;
 var deckInfo = [];
 var cardSelectionRect; //The drag selection rectangle.
 var rectStartPoint = new Phaser.Point(0,0);
@@ -58,11 +59,12 @@ function create() {
   
 //hand area
 handArea = game.add.sprite(0, 0, 'hitArea');
-handArea.width = bg.width;
+handArea.width = bg.width/3;
 handArea.height = 40;
 handArea.inputEnabled = true;
 handArea.input.useHandCursor = true;
-handArea.x = bg.width/2 - handArea.width  /2;
+handArea.anchor = new Phaser.Point(.5, 0);
+handArea.x = bg.width/2;
 handArea.y = bg.height - handArea.height;
 
  tableGroup = game.add.group();
@@ -79,7 +81,7 @@ addActionButtons();
     var sprite = game.add.sprite(i*2, i*2, cardKey);
     tableGroup.add(sprite);
     sprite.anchor = new Phaser.Point(.5, .5);
-    sprite.scale.setTo(.12, .12);
+    sprite.scale.setTo(CARD_SCALE, CARD_SCALE);
     //added properties for this card game.
     sprite.front = deckInfo[i].image.replace('.png', '');
     sprite.back = deckInfo[i].back.replace('.png', '');
@@ -88,6 +90,10 @@ addActionButtons();
     sprite.inputEnabled = true;
     sprite.input.enableDrag(false, true, false, 255, null, bg);
     //sprite.input.enableSnap(46, 65, true);
+
+    // Click events
+    sprite.events.onInputDown.add(card_OnDown);
+    sprite.events.onInputUp.add(card_OnUp);
 
     //  Drag events
     sprite.events.onDragUpdate.add(dragUpdate);
@@ -239,6 +245,25 @@ function flipCard(sprite)
 
 
 
+//CARD INPUT/////////////////////////////////
+function card_OnDown(thisSprite) {
+  if(dragArray.length == 0)
+  {
+   thisSprite.scale.setTo(1,1);
+  }
+}
+
+function card_OnUp(thisSprite) {
+  if(dragArray.length == 0)
+  {
+   thisSprite.scale.setTo(CARD_SCALE,CARD_SCALE); 
+  }
+}
+
+
+
+
+
 
 //CARD DRAG HANDLING//////////////////
 function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
@@ -375,7 +400,7 @@ function render() {
     tableGroup.forEach(function(sprite){
       if(sprite.tint != 0xffffff){
         sprite.tint = 0xffffff;
-        sprite.scale.setTo(.12, .12);
+        sprite.scale.setTo(CARD_SCALE, CARD_SCALE);
         game.tweens.remove(sprite.colorFlash);
       }
     });
@@ -400,7 +425,7 @@ function render() {
             if(sprite.tint != 0xffffff)
             {
               sprite.tint = 0xffffff;
-              sprite.scale.setTo(.12, .12);
+              sprite.scale.setTo(CARD_SCALE, CARD_SCALE);
               game.tweens.remove(sprite.colorFlash);
             }
           }
@@ -451,7 +476,7 @@ function addCardsToHand(thisSprite)
     dragArray.forEach(function(sprite){
       handGroup.add(sprite);
       sprite.input.enableDrag(false, true, false, 255, null, bg);
-      sprite.scale.setTo(.3, .3);
+      sprite.scale.setTo(1,1);
       sprite.tint = 0xffffff;
       game.tweens.remove(sprite.colorFlash);
     });
@@ -459,7 +484,7 @@ function addCardsToHand(thisSprite)
     console.log('card DROPPED over hand area');
     handGroup.add(thisSprite);
     thisSprite.input.enableDrag(false, true, false, 255, null, bg);
-    thisSprite.scale.setTo(.3, .3);
+    thisSprite.scale.setTo(1,1);
   }
   
   //now arrange the cards in the hand from left to right...
@@ -489,7 +514,7 @@ function removeCardFromHand(thisSprite)
   if(!handGroup.children.includes(thisSprite)) return;
 
   tableGroup.add(thisSprite);
-  thisSprite.scale.setTo(.12, .12);
+  thisSprite.scale.setTo(CARD_SCALE, CARD_SCALE);
 
   arrangeCardsInHand();
   
