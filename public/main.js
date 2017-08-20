@@ -1,9 +1,17 @@
 $(function(){
 
+//top level object
+var table = {
+  players: [],
+  tableCards: [], //an array of cards... because cards don't HAVE to be in piles
+}
+//players can contain hands and dragGroups. 
+
 var $window = $(window);
 var $usernameInput = $('.usernameInput'); // Input for username
 
 var game = new Phaser.Game(960, 540, Phaser.CANVAS, 'gameContainer', { preload: preload, create: create, update: update });
+var isHost = false;
 var bg, handArea;
 const CARD_SCALE = .22;
 var deckInfo = [];
@@ -11,7 +19,7 @@ var cardSelectionRect; //The drag selection rectangle.
 var rectStartPoint = new Phaser.Point(0,0);
 var rectMouseDown = false;
 var cardSelectionPosition;
-var selectionDidChangePosition = false;
+var selectionDidChange = false;
 var tableGroup, dragGroup, handGroup, actionButtonGroup;
 var dragArray = [];
 
@@ -164,16 +172,15 @@ function btnStagger_Up(){
     dragGroup.add(sprite);
   });
 
-  
-  //TODO:SERVER
+  selectionDidChange = true;
 
 }
 
 function btnShuffle_Up(){
   deckify();
   shuffle(dragArray);
-
-  //TODO:SERVER?
+  
+  
 }
 
 function btnFlip_Up(){
@@ -182,13 +189,13 @@ function btnFlip_Up(){
     flipCard(sprite);
   });
 
-  //TODO:SERVER
+  selectionDidChange = true;
 }
 
 function btnDeckify_Up(){
   deckify();
 
-  //TODO:SERVER
+  selectionDidChange = true;
 }
 function deckify()
 {
@@ -275,7 +282,7 @@ function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
   //is the dragged card over the hand area?
   if(thisSprite.overlap(handArea))
   {
-    console.log('card(s) over hand area');
+    logMessage('card(s) over hand area');
   }
 
   //if the sprite being dragged isn't in the card selection
@@ -324,9 +331,9 @@ function dragStop(thisSprite) {
 
   if(dragArray.length > 0)
   {
-    selectionDidChangePosition = (cardSelectionPosition.x - dragArray[0].x != 0) || (cardSelectionPosition.y - dragArray[0].y != 0);
+    selectionDidChange = (cardSelectionPosition.x - dragArray[0].x != 0) || (cardSelectionPosition.y - dragArray[0].y != 0);
   } else {
-    console.log(username + " moved one card to a new position"); //TODO:SERVER
+    logMessage(username + " moved one card to a new position"); //TODO:SERVER
   }
 
 }
@@ -392,10 +399,10 @@ function render() {
     doCardSelection();
 
     //tell the server that the cards can be unlocked for everyone :).
-    console.log("reseting " + username + "'s selection"); //TODO:SERVER
+    logMessage("reseting " + username + "'s selection"); //TODO:SERVER
 
     //did they actually move the cards?
-    if(selectionDidChangePosition) console.log(username + " moved the card(s) to a new position"); //TODO:SERVER
+    if(selectionDidChange) logMessage(username + " moved the card(s) to a new position"); //TODO:SERVER
 
     tableGroup.forEach(function(sprite){
       if(sprite.tint != 0xffffff){
@@ -405,7 +412,7 @@ function render() {
       }
     });
 
-    selectionDidChangePosition = undefined;
+    selectionDidChange = undefined;
     cardSelectionPosition = undefined;
   }
 
@@ -462,7 +469,7 @@ function bg_Mouse_Up(){
   if(dragArray.length > 0)
   {
     cardSelectionPosition = new Phaser.Point(dragArray[0].x, dragArray[0].y); //track the first cards position to see if it ever changes.
-   console.log(username + " selected some cards."); //TODO:SERVER 
+   logMessage(username + " selected some cards."); //TODO:SERVER 
   }
 }
 
@@ -481,7 +488,7 @@ function addCardsToHand(thisSprite)
       game.tweens.remove(sprite.colorFlash);
     });
   } else {
-    console.log('card DROPPED over hand area');
+    logMessage('card DROPPED over hand area');
     handGroup.add(thisSprite);
     thisSprite.input.enableDrag(false, true, false, 255, null, bg);
     thisSprite.scale.setTo(1,1);
@@ -518,11 +525,28 @@ function removeCardFromHand(thisSprite)
 
   arrangeCardsInHand();
   
-  console.log('card TAKEN FROM hand area');
+  logMessage('card TAKEN FROM hand area');
 
   //TODO:SERVER
 
 }
+
+
+
+
+
+//Messaging functions//////////////////////
+function getFullTableLayout()
+{
+
+
+  //loop through the tableGroup
+
+  //loop through the drag array, and broadcast the player that is controlling it
+
+  //loop through the handGroups of each player and broadcast them.
+}
+
 
 
 // var FADE_TIME = 150; // ms
@@ -571,117 +595,16 @@ function removeCardFromHand(thisSprite)
     }
   }
 
-  // Sends a chat message
-  // function sendMessage () {
-  //   var message = $inputMessage.val();
-  //   // Prevent markup from being injected into the message
-  //   message = cleanInput(message);
-  //   // if there is a non-empty message and a socket connection
-  //   if (message && connected) {
-  //     $inputMessage.val('');
-  //     addChatMessage({
-  //       username: username,
-  //       message: message
-  //     });
-  //     // tell server to execute 'new message' and send along one parameter
-  //     socket.emit('new message', message);
-  //   }
-  // }
 
-  // Adds the visual chat message to the message list
-  // function addChatMessage (data, options) {
-  //   // Don't fade the message in if there is an 'X was typing'
-  //   var $typingMessages = getTypingMessages(data);
-  //   options = options || {};
-  //   if ($typingMessages.length !== 0) {
-  //     options.fade = false;
-  //     $typingMessages.remove();
-  //   }
 
-  //   var $usernameDiv = $('<span class="username"/>')
-  //     .text(data.username)
-  //     .css('color', getUsernameColor(data.username));
-  //   var $messageBodyDiv = $('<span class="messageBody">')
-  //     .text(data.message);
 
-  //   var typingClass = data.typing ? 'typing' : '';
-  //   var $messageDiv = $('<li class="message"/>')
-  //     .data('username', data.username)
-  //     .addClass(typingClass)
-  //     .append($usernameDiv, $messageBodyDiv);
-
-  //   addMessageElement($messageDiv, options);
-  // }
-
-  // // Adds the visual chat typing message
-  // function addChatTyping (data) {
-  //   data.typing = true;
-  //   data.message = 'is typing';
-  //   addChatMessage(data);
-  // }
-
-  // // Removes the visual chat typing message
-  // function removeChatTyping (data) {
-  //   getTypingMessages(data).fadeOut(function () {
-  //     $(this).remove();
-  //   });
-  // }
-
-  // Adds a message element to the messages and scrolls to the bottom
-  // el - The element to add as a message
-  // options.fade - If the element should fade-in (default = true)
-  // options.prepend - If the element should prepend
-  //   all other messages (default = false)
-  // function addMessageElement (el, options) {
-  //   var $el = $(el);
-
-  //   // Setup default options
-  //   if (!options) {
-  //     options = {};
-  //   }
-  //   if (typeof options.fade === 'undefined') {
-  //     options.fade = true;
-  //   }
-  //   if (typeof options.prepend === 'undefined') {
-  //     options.prepend = false;
-  //   }
-
-  //   // Apply options
-  //   if (options.fade) {
-  //     $el.hide().fadeIn(FADE_TIME);
-  //   }
-  //   if (options.prepend) {
-  //     $messages.prepend($el);
-  //   } else {
-  //     $messages.append($el);
-  //   }
-  //   $messages[0].scrollTop = $messages[0].scrollHeight;
-  // }
 
   // Prevents input from having injected markup
   function cleanInput (input) {
     return $('<div/>').text(input).text();
   }
 
-  // Updates the typing event
-  // function updateTyping () {
-  //   if (connected) {
-  //     if (!typing) {
-  //       typing = true;
-  //       socket.emit('typing');
-  //     }
-  //     lastTypingTime = (new Date()).getTime();
 
-  //     setTimeout(function () {
-  //       var typingTimer = (new Date()).getTime();
-  //       var timeDiff = typingTimer - lastTypingTime;
-  //       if (timeDiff >= TYPING_TIMER_LENGTH && typing) {
-  //         socket.emit('stop typing');
-  //         typing = false;
-  //       }
-  //     }, TYPING_TIMER_LENGTH);
-  //   }
-  // }
 
   // Gets the 'X is typing' messages of a user
   // function getTypingMessages (data) {
@@ -713,7 +636,6 @@ function removeCardFromHand(thisSprite)
     if (event.which === 13) {
       if (username) {
         sendMessage();
-        socket.emit('stop typing');
         typing = false;
       } else {
         setUsername();
@@ -721,9 +643,6 @@ function removeCardFromHand(thisSprite)
     }
   });
 
-  // $inputMessage.on('input', function() {
-  //   updateTyping();
-  // });
 
   // Click events
 
@@ -743,39 +662,45 @@ function removeCardFromHand(thisSprite)
   socket.on('login', function (data) {
     connected = true;
     // Display the welcome message
+    if(data.numUsers === 1) isHost = true;
+    if(isHost)
+    {
+      logMessage("you are the host. " + data.numUsers);
+    } else {
+      //request the full setup from the server.
+      socket.emit("get setup");
+    }
+    
+
     var message = "Welcome to Play Cards – ";
-    console.log(message);
-    // log(message, {
-    //   prepend: true
-    // });
-    //addParticipantsMessage(data);
+    logMessage(message);
   });
 
 
   // Whenever the server emits 'user joined', log it in the chat body
   socket.on('user joined', function (data) {
-    console.log(data.username + ' joined');
+    logMessage(data.username + ' joined' + ", is host: " + isHost);
   });
 
   // Whenever the server emits 'user left', log it in the chat body
   socket.on('user left', function (data) {
-    console.log(data.username + ' left');
+    logMessage(data.username + ' left');
   });
 
 
   socket.on('disconnect', function () {
-    console.log('you have been disconnected');
+    logMessage('you have been disconnected');
   });
 
   socket.on('reconnect', function () {
-    console.log('you have been reconnected');
+    logMessage('you have been reconnected');
     if (username) {
       socket.emit('add user', username);
     }
   });
 
   socket.on('reconnect_error', function () {
-    console.log('attempt to reconnect has failed');
+    logMessage('attempt to reconnect has failed');
   });
 
 });
@@ -783,6 +708,13 @@ function removeCardFromHand(thisSprite)
 
 
 
+
+
+var debug = true;
+function logMessage(message)
+{
+  if(debug) console.log(message);
+}
 
 
 

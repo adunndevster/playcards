@@ -9,6 +9,13 @@ var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 var port = process.env.PORT || 3000;
 
+//redis fun times.
+var pub = require('redis').createClient(6380,'playcards.redis.cache.windows.net', {auth_pass: 'TAgbEguF00jDpyEzIpGWYOnsUOtEnfe4uk/35Dztbm4=', return_buffers: true});
+var sub = require('redis').createClient(6380,'playcards.redis.cache.windows.net', {auth_pass: 'TAgbEguF00jDpyEzIpGWYOnsUOtEnfe4uk/35Dztbm4=', return_buffers: true});
+
+var redis = require('socket.io-redis');
+io.adapter(redis({pubClient: pub, subClient: sub}));
+
 server.listen(port, function () {
   console.log('Server listening at port %d', port);
 });
@@ -23,14 +30,12 @@ var numUsers = 0;
 io.on('connection', function (socket) {
   var addedUser = false;
 
-  // when the client emits 'new message', this listens and executes
-  socket.on('new message', function (data) {
-    // we tell the client to execute 'new message'
-    socket.broadcast.emit('new message', {
-      username: socket.username,
-      message: data
-    });
-  });
+  //do we already have a host? If so, get the state of the game from player 1,
+  //and broadcast it back to all of the players.
+  if(numUsers >= 1) //there is a host.
+  {
+    
+  }
 
   // when the client emits 'add user', this listens and executes
   socket.on('add user', function (username) {
@@ -50,19 +55,6 @@ io.on('connection', function (socket) {
     });
   });
 
-  // when the client emits 'typing', we broadcast it to others
-  socket.on('typing', function () {
-    socket.broadcast.emit('typing', {
-      username: socket.username
-    });
-  });
-
-  // when the client emits 'stop typing', we broadcast it to others
-  socket.on('stop typing', function () {
-    socket.broadcast.emit('stop typing', {
-      username: socket.username
-    });
-  });
 
   // when the user disconnects.. perform this
   socket.on('disconnect', function () {
@@ -75,6 +67,13 @@ io.on('connection', function (socket) {
         numUsers: numUsers
       });
     }
+  });
+
+
+  // when a non-host player joins, they will ask for the state of the table.
+  socket.on('get setup', function(){
+    //send a message to the host, to round up the table state and broadcast it out.
+    //for now, the host will be our source of truth.
   });
 });
 
@@ -159,3 +158,23 @@ var table = {
   cards: [], //an array of cards... because cards don't HAVE to be in piles
   players: [] //an array of players
 }
+
+
+
+//quick reference//////////////////
+/*
+socket.emit('message', "this is a test"); //sending to sender-client only
+socket.broadcast.emit('message', "this is a test"); //sending to all clients except sender
+socket.broadcast.to('game').emit('message', 'nice game'); //sending to all clients in 'game' room(channel) except sender
+socket.to('game').emit('message', 'enjoy the game'); //sending to sender client, only if they are in 'game' room(channel)
+socket.broadcast.to(socketid).emit('message', 'for your eyes only'); //sending to individual socketid
+io.emit('message', "this is a test"); //sending to all clients, include sender
+io.in('game').emit('message', 'cool game'); //sending to all clients in 'game' room(channel), include sender
+io.of('myNamespace').emit('message', 'gg'); //sending to all clients in namespace 'myNamespace', include sender
+socket.emit(); //send to all connected clients
+socket.broadcast.emit(); //send to all connected clients except the one that sent the message
+socket.on(); //event listener, can be called on client to execute on server
+io.sockets.socket(); //for emiting to specific clients
+io.sockets.emit(); //send to all connected clients (same as socket.emit)
+io.sockets.on() ; //initial connection from a client.
+*/
