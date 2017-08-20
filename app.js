@@ -10,8 +10,8 @@ var io = require('socket.io')(server);
 var port = process.env.PORT || 3000;
 
 //redis fun times.
-var pub = require('redis').createClient(6379,'playcards.redis.cache.windows.net', {auth_pass: 'f8bSDDP6Vl3C8vVw2zqUQ6aD+3li8Vpj2D9NtTJsPNc=', return_buffers: true});
-var sub = require('redis').createClient(6379,'playcards.redis.cache.windows.net', {auth_pass: 'f8bSDDP6Vl3C8vVw2zqUQ6aD+3li8Vpj2D9NtTJsPNc=', return_buffers: true});
+var pub = require('redis').createClient(6380,'playcards.redis.cache.windows.net', {auth_pass: 'f8bSDDP6Vl3C8vVw2zqUQ6aD+3li8Vpj2D9NtTJsPNc=', return_buffers: true});
+var sub = require('redis').createClient(6380,'playcards.redis.cache.windows.net', {auth_pass: 'f8bSDDP6Vl3C8vVw2zqUQ6aD+3li8Vpj2D9NtTJsPNc=', return_buffers: true});
 
 var redis = require('socket.io-redis');
 
