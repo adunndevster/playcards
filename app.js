@@ -8,18 +8,7 @@ var server = require('http').createServer(app);
 //var io = require('../..')(server);
 var io = require('socket.io')(server);
 var port = process.env.PORT || 3000;
-
-//redis fun times.
-var pub = require('redis').createClient(6380,'playcards.redis.cache.windows.net', {auth_pass: 'f8bSDDP6Vl3C8vVw2zqUQ6aD+3li8Vpj2D9NtTJsPNc=', return_buffers: true});
-var sub = require('redis').createClient(6380,'playcards.redis.cache.windows.net', {auth_pass: 'f8bSDDP6Vl3C8vVw2zqUQ6aD+3li8Vpj2D9NtTJsPNc=', return_buffers: true});
-
-var redis = require('socket.io-redis');
-
-//server
-io.adapter(redis({pubClient: pub, subClient: sub}));
-
-//localhost
-//io.adapter(redis({ host: 'localhost', port: 6379 }));
+var hostId = null;
 
 server.listen(port, function () {
   console.log('Server listening at port %d', port);
@@ -35,19 +24,11 @@ var numUsers = 0;
 io.on('connection', function (socket) {
   var addedUser = false;
 
-  //do we already have a host? If so, get the state of the game from player 1,
-  //and broadcast it back to all of the players.
-  if(numUsers >= 1) //there is a host.
-  {
-    
-  }
-
   // when the client emits 'add user', this listens and executes
-  socket.on('add user', function (username) {
+  socket.on('add user', function (player) {
     if (addedUser) return;
 
-    // we store the username in the socket session for this client
-    socket.username = username;
+    socket.username = player.name;
     ++numUsers;
     addedUser = true;
     socket.emit('login', {
@@ -55,9 +36,18 @@ io.on('connection', function (socket) {
     });
     // echo globally (all clients) that a person has connected
     socket.broadcast.emit('user joined', {
-      username: socket.username,
+      player: player,
       numUsers: numUsers
     });
+
+    // we store the username in the socket session for this client
+    //do we already have a host? If so, get the state of the game from player 1,
+    //and broadcast it back to all of the players.
+    if(hostId === null) //there is a host.
+    {
+      hostId = socket.id;
+      //io.to(hostId).emit('secret', 'for your eyes only');
+    }
   });
 
 
@@ -65,6 +55,14 @@ io.on('connection', function (socket) {
   socket.on('disconnect', function () {
     if (addedUser) {
       --numUsers;
+      
+      if(hostId == socket.id || numUsers === 0)
+      {
+        hostId = null;
+        
+        //now audition for a new host.
+        socket.broadcast.emit('auditions');
+      } 
 
       // echo globally that this client has left
       socket.broadcast.emit('user left', {
@@ -75,10 +73,27 @@ io.on('connection', function (socket) {
   });
 
 
+  socket.on('sign me up', function(){
+    
+    if(hostId == null)
+    {
+      hostId = socket.id;
+      io.to(hostId).emit('assign host');
+    }
+  });
+
   // when a non-host player joins, they will ask for the state of the table.
-  socket.on('get setup', function(){
-    //send a message to the host, to round up the table state and broadcast it out.
+  socket.on('setup table', function(table){
+
+    if(player.spot == -1)
+    {
+      player.spot = table.openSpots.shift();
+    }
+
     //for now, the host will be our source of truth.
+    socket.broadcast.emit('synchronize tables', {
+      table: table
+    });
   });
 });
 
@@ -152,7 +167,7 @@ var hand = {
 var player = {
   hand: hand,
   name: "Jimmy",
-  pos: 1,
+  spot: 1,
   connected: true //this denotes that the player with this hand is online.
 }
 

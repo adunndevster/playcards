@@ -4,7 +4,15 @@ $(function(){
 var table = {
   players: [],
   tableCards: [], //an array of cards... because cards don't HAVE to be in piles
+  openSpots: [1,2,3,4,5,6]
 }
+var player = {
+  name: username,
+  hand: [],
+  spot: -1,
+  spotCards: [] //the cards that are sitting on this player's place mat.
+}
+
 //players can contain hands and dragGroups. 
 
 var $window = $(window);
@@ -21,7 +29,7 @@ var rectMouseDown = false;
 var cardSelectionPosition;
 var selectionDidChange = false;
 var tableGroup, dragGroup, handGroup, actionButtonGroup;
-var dragArray = [];
+var dragArray = [], allCardSprites = [];
 
 function preload() {
   game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
@@ -87,6 +95,8 @@ addActionButtons();
   {
     var cardKey = deckInfo[i].image.replace('.png', '');
     var sprite = game.add.sprite(i*2, i*2, cardKey);
+    sprite.id = i;
+    allCardSprites.push(sprite);
     tableGroup.add(sprite);
     sprite.anchor = new Phaser.Point(.5, .5);
     sprite.scale.setTo(CARD_SCALE, CARD_SCALE);
@@ -590,13 +600,61 @@ function getFullTableLayout()
       $gamePage.show();
       $loginPage.off('click');
 
-      // Tell the server your username
-      socket.emit('add user', username);
+      // Tell the server about yourself.
+      player.name = username;
+      socket.emit('add user', player);
     }
   }
 
+  function compileTable()
+  {
+    //get the position of every card on the table.
+    table.tableCards = [];
+    tableGroup.forEach(function(sprite){
+      var card = {
+        id: sprite.id,
+        x: sprite.x,
+        y: sprite.y,
+        isFaceUp: sprite.isFaceUp
+      }
 
+      table.tableCards.push(card);
+    })
+  }
 
+  function synchTable(animate)
+  {
+    if(animate === undefined) animate = false;
+
+    var animSpeed = 1;
+    if(animate) animSpeed = 300;
+    
+    allCardSprites.forEach(function(sprite)
+    {
+      //put all of the table cards in place.
+      table.tableCards.forEach(function(card)
+      {
+        if(card.id == sprite.id)
+        {
+          tableGroup.add(sprite);
+          game.add.tween(sprite).to( {x: card.x,
+                                      y: card.y}, animSpeed, "Sine", true, 0);
+          sprite.isFaceUp = card.isFaceUp;
+          tableizeCard(sprite);
+        }
+      });
+    });
+
+  }
+
+  function tableizeCard(sprite)
+  {
+    sprite.scale.setTo(CARD_SCALE, CARD_SCALE);
+    sprite.tint = 0xffffff;
+    game.tweens.remove(sprite.colorFlash);
+    sprite.isFaceUp = !sprite.isFaceUp;
+    flipCard(sprite);
+  }
 
 
   // Prevents input from having injected markup
@@ -658,6 +716,24 @@ function getFullTableLayout()
 
   // Socket events
 
+// socket.on('secret', function(data){
+//   logMessage('SECRET!');
+//   logMessage(data);
+// })
+
+
+  //whenever the host disconnects, the server asks for auditions for a new
+  //host that can inform new game joinees what is happening in the game.
+  socket.on('auditions', function(data){
+    alert('auditioning.');
+    socket.emit("sign me up");
+  });
+
+  socket.on('assign host', function(){
+    isHost = true;
+    logMessage('You are now the host.');
+  });
+
   // Whenever the server emits 'login', log the login message
   socket.on('login', function (data) {
     connected = true;
@@ -666,42 +742,85 @@ function getFullTableLayout()
     if(isHost)
     {
       logMessage("you are the host. " + data.numUsers);
-    } else {
-      //request the full setup from the server.
-      socket.emit("get setup");
     }
     
+    logMessage("Welcome to Play Cards – ");
 
-    var message = "Welcome to Play Cards – ";
-    logMessage(message);
+    player.spot = table.openSpots.shift();
+    table.players.push(player);
+    logMessage(table.players);
   });
 
 
+  socket.on('synchronize tables', function(data)
+  {
+    table = data.table;
+    logMessage("Incoming table:");
+    logMessage(table);
+    synchTable();
+  });
+
   // Whenever the server emits 'user joined', log it in the chat body
   socket.on('user joined', function (data) {
-    logMessage(data.username + ' joined' + ", is host: " + isHost);
+    table.players.push(data.player);
+    logMessage(data.player.name + " joined.");
+    logMessage(table);
+
+    if(isHost)
+    {
+
+      //set the player positions for each player.
+      var lastVal = 1;
+      table.players.forEach(function(player){
+
+        if(player.spot == -1)
+        {
+          player.spot = table.openSpots.shift();
+        }
+        
+      });
+      logMessage('sending the table');
+      //compile all of the game state and send it over.
+      compileTable();
+      socket.emit('setup table', table);
+    }
   });
 
   // Whenever the server emits 'user left', log it in the chat body
   socket.on('user left', function (data) {
     logMessage(data.username + ' left');
+    table.openSpots.unshift(table.players.find(x => x.name === data.username).spot);
+    table.players = table.players.filter(function( player ) {
+                                      return player.name !== data.username;
+                                  });
+                                
+    logMessage(table.players);
   });
 
 
   socket.on('disconnect', function () {
     logMessage('you have been disconnected');
+    table.players = table.players.filter(function( player ) {
+                                      return player.name !== username;
+                                  });
   });
 
   socket.on('reconnect', function () {
     logMessage('you have been reconnected');
     if (username) {
       socket.emit('add user', username);
+      table.players.add(player);
     }
   });
 
   socket.on('reconnect_error', function () {
     logMessage('attempt to reconnect has failed');
   });
+
+
+
+
+
 
 });
 
