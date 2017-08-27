@@ -21,7 +21,7 @@ var $usernameInput = $('.usernameInput'); // Input for username
 var game = new Phaser.Game(960, 540, Phaser.CANVAS, 'gameContainer', { preload: preload, create: create, update: update });
 var isHost = false;
 var bg, handArea;
-const CARD_SCALE = .22;
+const CARD_SCALE = .3;
 var deckInfo = [];
 var cardSelectionRect; //The drag selection rectangle.
 var rectStartPoint = new Phaser.Point(0,0);
@@ -343,7 +343,12 @@ function dragStop(thisSprite) {
   {
     selectionDidChange = (cardSelectionPosition.x - dragArray[0].x != 0) || (cardSelectionPosition.y - dragArray[0].y != 0);
   } else {
-    logMessage(username + " moved one card to a new position"); //TODO:SERVER
+    logMessage(username + " moved one card to a new position"); 
+    
+    //SERVER
+    compileTable();
+    socket.emit('update table', table);
+
   }
 
 }
@@ -412,7 +417,13 @@ function render() {
     logMessage("reseting " + username + "'s selection"); //TODO:SERVER
 
     //did they actually move the cards?
-    if(selectionDidChange) logMessage(username + " moved the card(s) to a new position"); //TODO:SERVER
+    if(selectionDidChange)
+    {
+      logMessage(username + " moved the card(s) to a new position"); //TODO:SERVER
+
+      compileTable();
+      socket.emit('update table', table);
+    } 
 
     tableGroup.forEach(function(sprite){
       if(sprite.tint != 0xffffff){
@@ -725,7 +736,6 @@ function getFullTableLayout()
   //whenever the host disconnects, the server asks for auditions for a new
   //host that can inform new game joinees what is happening in the game.
   socket.on('auditions', function(data){
-    alert('auditioning.');
     socket.emit("sign me up");
   });
 
@@ -757,7 +767,7 @@ function getFullTableLayout()
     table = data.table;
     logMessage("Incoming table:");
     logMessage(table);
-    synchTable();
+    synchTable(true);
   });
 
   // Whenever the server emits 'user joined', log it in the chat body

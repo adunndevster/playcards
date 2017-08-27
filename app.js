@@ -95,6 +95,13 @@ io.on('connection', function (socket) {
       table: table
     });
   });
+
+  socket.on('update table', function(table){
+    //for now, the host will be our source of truth.
+    socket.broadcast.emit('synchronize tables', {
+      table: table
+    });
+  })
 });
 
 
