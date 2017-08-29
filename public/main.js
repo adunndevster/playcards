@@ -160,6 +160,8 @@ function addActionButtons()
   actionButtonGroup.add(btnFlip);
   actionButtonGroup.add(btnDeckify);
   actionButtonGroup.add(btnDeal);
+
+  actionButtonGroup.alpha = 0;
 }
 
 function btnStagger_Up(){
@@ -238,6 +240,8 @@ function shuffle (array) {
     tableGroup.add(array[j]);
     dragGroup.add(array[j]);
   }
+
+  selectionDidChange = true;
 }
 
 function btnDeal_Up(){
@@ -266,7 +270,7 @@ function flipCard(sprite)
 function card_OnDown(thisSprite) {
   if(dragArray.length == 0)
   {
-   thisSprite.scale.setTo(1,1);
+   thisSprite.scale.setTo(1.5,1.5);
   }
 }
 
@@ -435,6 +439,8 @@ function render() {
 
     selectionDidChange = undefined;
     cardSelectionPosition = undefined;
+
+    game.add.tween(actionButtonGroup).to({alpha:0, y:-100}, 250, "Sine", true);
   }
 
 
@@ -490,7 +496,8 @@ function bg_Mouse_Up(){
   if(dragArray.length > 0)
   {
     cardSelectionPosition = new Phaser.Point(dragArray[0].x, dragArray[0].y); //track the first cards position to see if it ever changes.
-   logMessage(username + " selected some cards."); //TODO:SERVER 
+    game.add.tween(actionButtonGroup).to({alpha:1, y: 10}, 250, "Sine", true);
+    logMessage(username + " selected some cards."); //TODO:SERVER 
   }
 }
 
@@ -504,7 +511,7 @@ function addCardsToHand(thisSprite)
     dragArray.forEach(function(sprite){
       handGroup.add(sprite);
       sprite.input.enableDrag(false, true, false, 255, null, bg);
-      sprite.scale.setTo(1,1);
+      sprite.scale.setTo(1.5,1.5);
       sprite.tint = 0xffffff;
       game.tweens.remove(sprite.colorFlash);
     });
@@ -512,7 +519,7 @@ function addCardsToHand(thisSprite)
     logMessage('card DROPPED over hand area');
     handGroup.add(thisSprite);
     thisSprite.input.enableDrag(false, true, false, 255, null, bg);
-    thisSprite.scale.setTo(1,1);
+    thisSprite.scale.setTo(1.5,1.5);
   }
   
   //now arrange the cards in the hand from left to right...
@@ -640,20 +647,19 @@ function getFullTableLayout()
     var animSpeed = 1;
     if(animate) animSpeed = 300;
     
-    allCardSprites.forEach(function(sprite)
+    //put all of the table cards in place.
+    var sprite;
+    table.tableCards.forEach(function(card)
     {
-      //put all of the table cards in place.
-      table.tableCards.forEach(function(card)
+      sprite = allCardSprites[card.id];
+      if(sprite != undefined)
       {
-        if(card.id == sprite.id)
-        {
-          tableGroup.add(sprite);
-          game.add.tween(sprite).to( {x: card.x,
-                                      y: card.y}, animSpeed, "Sine", true, 0);
-          sprite.isFaceUp = card.isFaceUp;
-          tableizeCard(sprite);
-        }
-      });
+        sprite.bringToTop();
+        game.add.tween(sprite).to( {x: card.x,
+                                    y: card.y}, animSpeed, "Sine", true, 0);
+        sprite.isFaceUp = card.isFaceUp;
+        tableizeCard(sprite);
+      }
     });
 
   }
