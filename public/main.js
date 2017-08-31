@@ -13,6 +13,51 @@ var player = {
   spotCards: [] //the cards that are sitting on this player's place mat.
 }
 
+
+//set up the player spots.
+var playerSpots = [];
+var playerSpot;
+const  SPOT_WIDTH = 180, SPOT_HEIGHT= 126;
+const CARD_WIDTH_LARGE = 320, CARD_HEIGHT_LARGE = 465;
+const CARD_WIDTH_MED = 100, CARD_HEIGHT_MED = 145;
+const CARD_WIDTH_SM = 50, CARD_HEIGHT_SM = 73;
+
+playerSpot = {
+  x: 210,
+  y: 414
+}
+playerSpots.push(playerSpot);
+
+playerSpot = {
+  x: 0,
+  y: 180
+}
+playerSpots.push(playerSpot);
+
+playerSpot = {
+  x: 210,
+  y: 0
+}
+playerSpots.push(playerSpot);
+
+playerSpot = {
+  x: 583,
+  y: 0
+}
+playerSpots.push(playerSpot);
+
+playerSpot = {
+  x: 834,
+  y: 180
+}
+playerSpots.push(playerSpot);
+
+playerSpot = {
+  x: 583,
+  y: 414
+}
+playerSpots.push(playerSpot);
+
 //players can contain hands and dragGroups. 
 
 var $window = $(window);
@@ -79,9 +124,19 @@ handArea.width = bg.width/3;
 handArea.height = 40;
 handArea.inputEnabled = true;
 handArea.input.useHandCursor = true;
-handArea.anchor = new Phaser.Point(.5, 0);
-handArea.x = bg.width/2;
-handArea.y = bg.height - handArea.height;
+handArea.anchor = new Phaser.Point(1, 1);
+handArea.x = bg.width;
+handArea.y = bg.height;
+
+//playerspots
+var newSpot;
+for(var i=0; i<playerSpots.length; i++)
+{
+  newSpot = game.add.sprite(playerSpots[i].x, playerSpots[i].y, 'hitArea');
+  newSpot.width = (i !== 1 && i !== 4) ? SPOT_WIDTH : SPOT_HEIGHT;
+  newSpot.height = (i !== 1 && i !== 4) ? SPOT_HEIGHT : SPOT_WIDTH;;
+}
+
 
  tableGroup = game.add.group();
  handGroup = game.add.group();
@@ -99,14 +154,15 @@ addActionButtons();
     allCardSprites.push(sprite);
     tableGroup.add(sprite);
     sprite.anchor = new Phaser.Point(.5, .5);
-    sprite.scale.setTo(CARD_SCALE, CARD_SCALE);
+    sprite.width = CARD_WIDTH_SM;
+    sprite.height = CARD_HEIGHT_SM;
     //added properties for this card game.
     sprite.front = deckInfo[i].image.replace('.png', '');
     sprite.back = deckInfo[i].back.replace('.png', '');
     sprite.isFaceUp = true;
 
     sprite.inputEnabled = true;
-    sprite.input.enableDrag(false, true, false, 255, null, bg);
+    sprite.input.enableDrag(false, true, false, 255, null);
     //sprite.input.enableSnap(46, 65, true);
 
     // Click events
@@ -126,32 +182,32 @@ function addActionButtons()
   const gap = 20;
 
   var btnStagger = game.add.sprite(0, 0, 'btnStagger');
-  btnStagger.x = bg.width - btnStagger.width - gap;
-  btnStagger.y = gap;
+  btnStagger.x = gap;
+  btnStagger.y = bg.height - 120;
   btnStagger.inputEnabled = true;
   btnStagger.events.onInputUp.add(btnStagger_Up);
 
   var btnShuffle = game.add.sprite(0, 0, 'btnShuffle');
-  btnShuffle.x = bg.width - ((btnStagger.width + gap) * 2);
-  btnShuffle.y = gap;
+  btnShuffle.x = gap + btnShuffle.width;
+  btnShuffle.y = bg.height - 120;
   btnShuffle.inputEnabled = true;
   btnShuffle.events.onInputUp.add(btnShuffle_Up);
 
   var btnFlip = game.add.sprite(0, 0, 'btnFlip');
-  btnFlip.x = bg.width - ((btnStagger.width + gap) * 3);
-  btnFlip.y = gap;
+  btnFlip.x = gap + btnShuffle.width*2;
+  btnFlip.y = bg.height - 120;
   btnFlip.inputEnabled = true;
   btnFlip.events.onInputUp.add(btnFlip_Up);
 
   var btnDeckify = game.add.sprite(0, 0, 'btnDeckify');
-  btnDeckify.x = bg.width - ((btnStagger.width + gap) * 4);
-  btnDeckify.y = gap;
+  btnDeckify.x = gap + btnShuffle.width*3;
+  btnDeckify.y = bg.height - 120;
   btnDeckify.inputEnabled = true;
   btnDeckify.events.onInputUp.add(btnDeckify_Up);
 
   var btnDeal = game.add.sprite(0, 0, 'btnDeal');
-  btnDeal.x = bg.width - ((btnStagger.width + gap) * 5);
-  btnDeal.y = gap;
+  btnDeal.x = gap + btnShuffle.width*4;
+  btnDeal.y = bg.height - 120;
   btnDeal.inputEnabled = true;
   btnDeal.events.onInputUp.add(btnDeal_Up);
 
@@ -270,15 +326,15 @@ function flipCard(sprite)
 function card_OnDown(thisSprite) {
   if(dragArray.length == 0)
   {
-   thisSprite.scale.setTo(1.5,1.5);
+   
   }
 }
 
 function card_OnUp(thisSprite) {
-  if(dragArray.length == 0)
-  {
-   thisSprite.scale.setTo(CARD_SCALE,CARD_SCALE); 
-  }
+  // if(dragArray.length == 0)
+  // {
+  //   game.add.tween(thisSprite).to({width:CARD_WIDTH_SM, height:CARD_HEIGHT_SM}, 250, "Sine", true);
+  // }
 }
 
 
@@ -306,7 +362,7 @@ function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
     return;
   } 
 
-  thisSprite.input.enableDrag(false, false, false, 255, null, bg);
+  thisSprite.input.enableDrag(false, false, false, 255, null);
   dragArray.forEach(function(sprite)
   {
     if(thisSprite != sprite)
@@ -331,6 +387,7 @@ function dragStop(thisSprite) {
   if(thisSprite.overlap(handArea))
   {
     addCardsToHand(thisSprite);
+    return;
   } else {
     removeCardFromHand(thisSprite);
   }
@@ -410,7 +467,7 @@ function render() {
     dragArray.forEach(function(sprite){
       if(!handGroup.children.includes(sprite)) tableGroup.add(sprite);
       
-      sprite.input.enableDrag(false, true, false, 255, null, bg);
+      sprite.input.enableDrag(false, true, false, 255, null);
       sprite.dx = sprite.dy = undefined;
     });
     dragArray = []; //reset the drag group.
@@ -432,7 +489,7 @@ function render() {
     tableGroup.forEach(function(sprite){
       if(sprite.tint != 0xffffff){
         sprite.tint = 0xffffff;
-        sprite.scale.setTo(CARD_SCALE, CARD_SCALE);
+        game.add.tween(sprite).to({width:CARD_WIDTH_SM, height:CARD_HEIGHT_SM}, 250, "Sine", true);
         game.tweens.remove(sprite.colorFlash);
       }
     });
@@ -440,7 +497,7 @@ function render() {
     selectionDidChange = undefined;
     cardSelectionPosition = undefined;
 
-    game.add.tween(actionButtonGroup).to({alpha:0, y:-100}, 250, "Sine", true);
+    game.add.tween(actionButtonGroup).to({alpha:0, y: 100}, 250, "Sine", true);
   }
 
 
@@ -459,7 +516,7 @@ function render() {
             if(sprite.tint != 0xffffff)
             {
               sprite.tint = 0xffffff;
-              sprite.scale.setTo(CARD_SCALE, CARD_SCALE);
+              game.add.tween(sprite).to({width:CARD_WIDTH_SM, height:CARD_HEIGHT_SM}, 250, "Sine", true);
               game.tweens.remove(sprite.colorFlash);
             }
           }
@@ -496,7 +553,7 @@ function bg_Mouse_Up(){
   if(dragArray.length > 0)
   {
     cardSelectionPosition = new Phaser.Point(dragArray[0].x, dragArray[0].y); //track the first cards position to see if it ever changes.
-    game.add.tween(actionButtonGroup).to({alpha:1, y: 10}, 250, "Sine", true);
+    game.add.tween(actionButtonGroup).to({alpha:1, y: 10}, bg.height - 150, "Sine", true);
     logMessage(username + " selected some cards."); //TODO:SERVER 
   }
 }
@@ -510,16 +567,20 @@ function addCardsToHand(thisSprite)
     
     dragArray.forEach(function(sprite){
       handGroup.add(sprite);
-      sprite.input.enableDrag(false, true, false, 255, null, bg);
-      sprite.scale.setTo(1.5,1.5);
+      sprite.input.enableDrag(false, true, false, 255, null);
+      //game.add.tween(sprite).to({width:CARD_WIDTH_MED, height:CARD_HEIGHT_MED}, 250, "Sine", true);
+      sprite.width = CARD_WIDTH_MED;
+      sprite.height = CARD_HEIGHT_MED;
       sprite.tint = 0xffffff;
       game.tweens.remove(sprite.colorFlash);
     });
   } else {
     logMessage('card DROPPED over hand area');
     handGroup.add(thisSprite);
-    thisSprite.input.enableDrag(false, true, false, 255, null, bg);
-    thisSprite.scale.setTo(1.5,1.5);
+    thisSprite.input.enableDrag(false, true, false, 255, null);
+    //game.add.tween(thisSprite).to({width:CARD_WIDTH_MED, height:CARD_HEIGHT_MED}, 250, "Sine", true);
+    thisSprite.width = CARD_WIDTH_MED;
+    thisSprite.height = CARD_HEIGHT_MED;
   }
   
   //now arrange the cards in the hand from left to right...
@@ -532,13 +593,13 @@ function addCardsToHand(thisSprite)
 
 function arrangeCardsInHand()
 {
-  handGroup.sort('x', Phaser.Group.SORT_ASCENDING);
-  var gap = bg.width*.70 / handGroup.length;
-  if(gap > 30) gap = 30;
+  handGroup.sort('x', Phaser.Group.SORT_DESCENDING);
+  var gap = (handArea.width - 60) / handGroup.length;
+  if(gap > CARD_WIDTH_MED + 5) gap = CARD_WIDTH_MED + 5;
   var counter = 0;
   handGroup.forEach(function(sprite){
     sprite.y = bg.height;
-    sprite.x = (counter * gap) + (bg.width/2)  - ((gap*handGroup.length)/2);
+    sprite.x = bg.width - sprite.width - (gap*counter) + 20;
     counter++;
   });
 }
@@ -549,7 +610,7 @@ function removeCardFromHand(thisSprite)
   if(!handGroup.children.includes(thisSprite)) return;
 
   tableGroup.add(thisSprite);
-  thisSprite.scale.setTo(CARD_SCALE, CARD_SCALE);
+  game.add.tween(thisSprite).to({width:CARD_WIDTH_SM, height:CARD_HEIGHT_SM}, 250, "Sine", true);
 
   arrangeCardsInHand();
   
@@ -666,7 +727,7 @@ function getFullTableLayout()
 
   function tableizeCard(sprite)
   {
-    sprite.scale.setTo(CARD_SCALE, CARD_SCALE);
+    game.add.tween(sprite).to({width:CARD_WIDTH_SM, height:CARD_HEIGHT_SM}, 250, "Sine", true);
     sprite.tint = 0xffffff;
     game.tweens.remove(sprite.colorFlash);
     sprite.isFaceUp = !sprite.isFaceUp;
