@@ -23,38 +23,57 @@ const CARD_WIDTH_MED = 100, CARD_HEIGHT_MED = 145;
 const CARD_WIDTH_SM = 50, CARD_HEIGHT_SM = 73;
 
 playerSpot = {
-  x: 210,
-  y: 414
-}
-playerSpots.push(playerSpot);
-
-playerSpot = {
+  id:0,
   x: 0,
-  y: 180
+  y: 180,
+  label: null,
+  bounds: null,
+  playerName: ''
 }
 playerSpots.push(playerSpot);
 
 playerSpot = {
-  x: 210,
-  y: 0
+  id:1,
+  x: 122,
+  y: 0,
+  label: null,
+  bounds: null
 }
 playerSpots.push(playerSpot);
 
 playerSpot = {
-  x: 583,
-  y: 0
+  id:2,
+  x: 389,
+  y: 0,
+  label: null,
+  bounds: null
 }
 playerSpots.push(playerSpot);
 
 playerSpot = {
-  x: 834,
-  y: 180
+  id:3,
+  x: 658,
+  y: 0,
+  label: null,
+  bounds: null
 }
 playerSpots.push(playerSpot);
 
 playerSpot = {
-  x: 583,
-  y: 414
+  id:4,
+  x: 835,
+  y: 180,
+  label: null,
+  bounds: null
+}
+playerSpots.push(playerSpot);
+
+playerSpot = {
+  id:5,
+  x: 389,
+  y: 414,
+  label: null,
+  bounds: null
 }
 playerSpots.push(playerSpot);
 
@@ -133,8 +152,12 @@ var newSpot;
 for(var i=0; i<playerSpots.length; i++)
 {
   newSpot = game.add.sprite(playerSpots[i].x, playerSpots[i].y, 'hitArea');
-  newSpot.width = (i !== 1 && i !== 4) ? SPOT_WIDTH : SPOT_HEIGHT;
-  newSpot.height = (i !== 1 && i !== 4) ? SPOT_HEIGHT : SPOT_WIDTH;;
+  newSpot.width = (i !== 0 && i !== 4) ? SPOT_WIDTH : SPOT_HEIGHT;
+  newSpot.height = (i !== 0 && i !== 4) ? SPOT_HEIGHT : SPOT_WIDTH;
+  newSpot.label = addText('', playerSpots[i].x + 10, playerSpots[i].y + 6);
+  newSpot.label.alpha = .6;
+  playerSpots[i].label = newSpot.label;
+  playerSpots[i].bounds = newSpot;
 }
 
 
@@ -149,7 +172,7 @@ addActionButtons();
  for(var i=0; i<deckInfo.length; i++)
   {
     var cardKey = deckInfo[i].image.replace('.png', '');
-    var sprite = game.add.sprite(i*2, i*2, cardKey);
+    var sprite = game.add.sprite(game.world.centerX, game.world.centerY, cardKey);
     sprite.id = i;
     allCardSprites.push(sprite);
     tableGroup.add(sprite);
@@ -160,6 +183,7 @@ addActionButtons();
     sprite.front = deckInfo[i].image.replace('.png', '');
     sprite.back = deckInfo[i].back.replace('.png', '');
     sprite.isFaceUp = true;
+    flipCard(sprite);
 
     sprite.inputEnabled = true;
     sprite.input.enableDrag(false, true, false, 255, null);
@@ -324,10 +348,7 @@ function flipCard(sprite)
 
 //CARD INPUT/////////////////////////////////
 function card_OnDown(thisSprite) {
-  if(dragArray.length == 0)
-  {
-   
-  }
+  rotateCard(thisSprite, 0, true);
 }
 
 function card_OnUp(thisSprite) {
@@ -382,6 +403,20 @@ function dragStop(thisSprite) {
 
   //HACK - ensure the dragged card(s) are on top
   if(dragArray.length == 0  && !handGroup.children.includes(thisSprite)) tableGroup.add(thisSprite);
+
+  //is the dragged card over a player's spot?
+  var doesOverlapASpot = false;
+  playerSpots.forEach(spot => {
+    if(spot.bounds.overlap(thisSprite))
+    {
+      addCardsToSpot(spot, thisSprite);
+      doesOverlapASpot = true;
+    }
+  });
+  if(!doesOverlapASpot)
+  {
+    rotateCards(0, thisSprite);
+  }
 
   //is the dragged card over the hand area?
   if(thisSprite.overlap(handArea))
@@ -558,6 +593,68 @@ function bg_Mouse_Up(){
   }
 }
 
+
+//THE PLAYER SPOTS/////////////////
+function addCardsToSpot(spot, thisSprite)
+{
+
+  if(dragArray.length > 0)
+  {
+    dragArray.forEach(function(sprite){
+      arrangeCardInSpot(spot, sprite, thisSprite);
+    });
+  } else {
+    logMessage("card DROPPED over player's spot");
+    arrangeCardInSpot(spot, thisSprite, thisSprite);
+  }
+  
+  resetCardSelection();
+
+  //TODO:SERVER
+}
+
+function arrangeCardInSpot(spot, thisSprite, dragSprite)
+{
+  if(dragSprite === undefined) dragSprite = thisSprite;
+
+  if(spot.id === 0)
+  {
+    rotateCard(thisSprite, 90);
+  } else if(spot.id === 1 || spot.id === 2 || spot.id === 3){
+    rotateCard(thisSprite, -180);
+  } else if(spot.id === 4){
+    rotateCard(thisSprite, -90);
+  } else if(spot.id === 5){
+    rotateCard(thisSprite, 0);
+  }
+  thisSprite.tint = 0xffffff;
+  game.tweens.remove(thisSprite.colorFlash);
+  var rand = 3 - (Math.random() * 6);
+  game.add.tween(thisSprite).to({x: dragSprite.x + rand, 
+                                 y:dragSprite.y + rand,
+                                 width:CARD_WIDTH_SM,
+                                 height:CARD_HEIGHT_SM}, 250, 'Sine', true);
+}
+
+function rotateCards(angle, thisSprite)
+{
+  if(dragArray.length > 0)
+  {
+    dragArray.forEach(function(sprite){
+      rotateCard(sprite, angle);
+    });
+  } else {
+    rotateCard(thisSprite, angle);
+  }
+}
+
+function rotateCard(thisSprite, angle, makePerfect)
+{
+  var rand = (makePerfect === true) ? 0 : 4 - (Math.random() * 8);
+  game.add.tween(thisSprite).to({angle:angle + rand}, 250, "Sine", true);
+}
+
+
 //THE HAND OF CARDS///////////////
 function addCardsToHand(thisSprite)
 {
@@ -621,6 +718,22 @@ function removeCardFromHand(thisSprite)
 }
 
 
+//TEXT/////////////
+function addText(textString, x, y)
+{
+  text = game.add.text(x, y, textString);
+  //text.anchor.set(0);
+  text.align = 'left';
+
+  text.font = 'Arial Black';
+  text.fontSize = 16;
+  text.fontWeight = 'bold';
+  text.fill = '#ffffff';
+
+  text.setShadow(0, 0, 'rgba(0, 0, 0, 0.5)', 0);
+
+  return text;
+}
 
 
 
@@ -687,8 +800,13 @@ function getFullTableLayout()
 
   function compileTable()
   {
-    //get the position of every card on the table.
+    //start with a clean state.
     table.tableCards = [];
+    table.players.forEach(player => {
+      player.spotCards = [];
+    })
+
+    //get the position of every card on the table.
     tableGroup.forEach(function(sprite){
       var card = {
         id: sprite.id,
@@ -698,7 +816,17 @@ function getFullTableLayout()
       }
 
       table.tableCards.push(card);
-    })
+
+      //check to see which cards are over each player's spot, and add them to their spotCards
+      //clear the spot cards to begin with...
+      playerSpots.forEach(spot => {
+        if(spot.bounds.overlap(sprite))
+        {
+          if(spot.playerName != '') table.players.find(x => x.name === spot.playerName).spotCards.push(card);
+        }
+      });
+    });
+    
   }
 
   function synchTable(animate)
@@ -708,6 +836,9 @@ function getFullTableLayout()
     var animSpeed = 1;
     if(animate) animSpeed = 300;
     
+    //update names
+    updateLabels();
+
     //put all of the table cards in place.
     var sprite;
     table.tableCards.forEach(function(card)
@@ -720,7 +851,25 @@ function getFullTableLayout()
                                     y: card.y}, animSpeed, "Sine", true, 0);
         sprite.isFaceUp = card.isFaceUp;
         tableizeCard(sprite);
+        rotateCard(sprite, 0);
       }
+    });
+
+    //move the spot cards to their places
+    table.players.forEach(player => {
+      player.spotCards.forEach(card => {
+          var spot = playerSpots.find(x => x.playerName === player.name);
+          sprite = allCardSprites[card.id];
+          if(sprite != undefined)
+          {
+            sprite.bringToTop();
+            game.add.tween(sprite).to( {x: spot.x + 80,
+                                        y: spot.y + 80}, animSpeed, "Sine", true, 0);
+            sprite.isFaceUp = card.isFaceUp;
+            tableizeCard(sprite);
+            arrangeCardInSpot(spot, sprite);
+          }
+      })
     });
 
   }
@@ -734,6 +883,25 @@ function getFullTableLayout()
     flipCard(sprite);
   }
 
+  function updateLabels()
+  {
+    logMessage('updating names');
+    logMessage(table.players.find(x => x.name === username));
+    var thisPlayersSpot = table.players.find(x => x.name === username).spot - 1;
+    var shiftVal = 5 - thisPlayersSpot;
+    playerSpots.forEach(spot => {
+      spot.label.setText('');
+      spot.playerName = '';
+    });
+    table.players.forEach(function(player){
+      var spotPos = (player.spot - 1) + shiftVal;
+      if(spotPos >= 6) spotPos = spotPos - 6;
+      logMessage('player.spot: ' + player.spot + ', shiftVal: ' + shiftVal +  ', spotPos: ' + spotPos);
+      var spot = playerSpots[spotPos];
+      spot.label.setText(player.name);
+      spot.playerName = player.name;
+    });
+  }
 
   // Prevents input from having injected markup
   function cleanInput (input) {
@@ -964,3 +1132,8 @@ function logMessage(message)
 
 
 
+
+//UTILITIES
+function rotateArray(arr){
+    arr.unshift(arr.pop());
+} 
