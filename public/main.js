@@ -4,11 +4,12 @@ $(function(){
 var table = {
   players: [],
   tableCards: [], //an array of cards... because cards don't HAVE to be in piles
+  handCards: [],
   openSpots: [1,2,3,4,5,6]
 }
 var player = {
   name: username,
-  hand: [],
+  handCards: [],
   spot: -1,
   spotCards: [] //the cards that are sitting on this player's place mat.
 }
@@ -352,10 +353,7 @@ function card_OnDown(thisSprite) {
 }
 
 function card_OnUp(thisSprite) {
-  // if(dragArray.length == 0)
-  // {
-  //   game.add.tween(thisSprite).to({width:CARD_WIDTH_SM, height:CARD_HEIGHT_SM}, 250, "Sine", true);
-  // }
+
 }
 
 
@@ -617,23 +615,30 @@ function arrangeCardInSpot(spot, thisSprite, dragSprite)
 {
   if(dragSprite === undefined) dragSprite = thisSprite;
 
-  if(spot.id === 0)
-  {
-    rotateCard(thisSprite, 90);
-  } else if(spot.id === 1 || spot.id === 2 || spot.id === 3){
-    rotateCard(thisSprite, -180);
-  } else if(spot.id === 4){
-    rotateCard(thisSprite, -90);
-  } else if(spot.id === 5){
-    rotateCard(thisSprite, 0);
-  }
   thisSprite.tint = 0xffffff;
   game.tweens.remove(thisSprite.colorFlash);
   var rand = 3 - (Math.random() * 6);
   game.add.tween(thisSprite).to({x: dragSprite.x + rand, 
                                  y:dragSprite.y + rand,
+                                 angle: getSpotRotationAngle(spot),
                                  width:CARD_WIDTH_SM,
                                  height:CARD_HEIGHT_SM}, 250, 'Sine', true);
+}
+function getSpotRotationAngle(spot)
+{
+  var rand = 4 - Math.round((Math.random() * 8));
+  if(spot.id === 0)
+  {
+    return 90 + rand;
+  } else if(spot.id === 1 || spot.id === 2 || spot.id === 3){
+    return -180 + rand;
+  } else if(spot.id === 4){
+    return -90 + rand;
+  } else if(spot.id === 5){
+    return 0 + rand;
+  }
+
+  return 0 + rand;
 }
 
 function rotateCards(angle, thisSprite)
@@ -650,7 +655,7 @@ function rotateCards(angle, thisSprite)
 
 function rotateCard(thisSprite, angle, makePerfect)
 {
-  var rand = (makePerfect === true) ? 0 : 4 - (Math.random() * 8);
+  var rand = (makePerfect === true) ? 0 : 4 - Math.round((Math.random() * 8));
   game.add.tween(thisSprite).to({angle:angle + rand}, 250, "Sine", true);
 }
 
@@ -670,6 +675,8 @@ function addCardsToHand(thisSprite)
       sprite.height = CARD_HEIGHT_MED;
       sprite.tint = 0xffffff;
       game.tweens.remove(sprite.colorFlash);
+      sprite.isFaceUp = false;
+      flipCard(sprite);
     });
   } else {
     logMessage('card DROPPED over hand area');
@@ -678,6 +685,8 @@ function addCardsToHand(thisSprite)
     //game.add.tween(thisSprite).to({width:CARD_WIDTH_MED, height:CARD_HEIGHT_MED}, 250, "Sine", true);
     thisSprite.width = CARD_WIDTH_MED;
     thisSprite.height = CARD_HEIGHT_MED;
+    thisSprite.isFaceUp = false;
+    flipCard(thisSprite);
   }
   
   //now arrange the cards in the hand from left to right...
@@ -685,12 +694,32 @@ function addCardsToHand(thisSprite)
 
   resetCardSelection();
 
-  //TODO:SERVER
+  //update the server
+  if(update !== false)
+  {
+    compileTable();
+    socket.emit('update table', table);
+  }
+  
 }
 
 function arrangeCardsInHand()
 {
-  handGroup.sort('x', Phaser.Group.SORT_DESCENDING);
+  //take the cards that don't belong to this player out of the hand group momentarily.
+  var tempArray = [];
+  logMessage('arranging cards');
+  logMessage('handGroup.length: ' + handGroup.length);
+  handGroup.forEach(function(sprite){
+    if(!sprite.overlap(handArea))
+    {
+      logMessage('adding to tablegroup');
+      tempArray.push(sprite);
+    }
+  });
+  tempArray.forEach(sprite => tableGroup.add(sprite));
+
+  logMessage('handGroup.length: ' + handGroup.length);
+  handGroup.sort('x', Phaser.Group.SORT_ASCENDING);
   var gap = (handArea.width - 60) / handGroup.length;
   if(gap > CARD_WIDTH_MED + 5) gap = CARD_WIDTH_MED + 5;
   var counter = 0;
@@ -699,6 +728,9 @@ function arrangeCardsInHand()
     sprite.x = bg.width - sprite.width - (gap*counter) + 20;
     counter++;
   });
+
+  //put the cards that don't belong to this player back in the hand group.
+  tempArray.forEach(sprite => handGroup.add(sprite));
 }
 
 function removeCardFromHand(thisSprite)
@@ -708,6 +740,11 @@ function removeCardFromHand(thisSprite)
 
   tableGroup.add(thisSprite);
   game.add.tween(thisSprite).to({width:CARD_WIDTH_SM, height:CARD_HEIGHT_SM}, 250, "Sine", true);
+
+  var index = table.players.findIndex(x => x.name === username);
+  table.players[index].handCards = table.players[index].handCards.filter(function( card ) {
+                                      return card.id !== thisSprite.id;
+                                  });
 
   arrangeCardsInHand();
   
@@ -802,11 +839,23 @@ function getFullTableLayout()
   {
     //start with a clean state.
     table.tableCards = [];
+    table.handCards = [];
     table.players.forEach(player => {
       player.spotCards = [];
+      //player.handCards = [];
     })
 
+    
     //get the position of every card on the table.
+    // var filteredTableGroup = tableGroup.filter(sprite => {
+    //   var isInAHand = false;
+    //   table.players.forEach(player => {
+    //     if(player.handCards.findIndex(card => {card.id === sprite.id}) === -1) isInAHand = true;
+    //   })
+    //   if(isInAHand) return sprite;
+    // })
+    // logMessage('-----------');
+    // logMessage(filteredTableGroup);
     tableGroup.forEach(function(sprite){
       var card = {
         id: sprite.id,
@@ -819,13 +868,35 @@ function getFullTableLayout()
 
       //check to see which cards are over each player's spot, and add them to their spotCards
       //clear the spot cards to begin with...
+
       playerSpots.forEach(spot => {
-        if(spot.bounds.overlap(sprite))
+        if(spot.bounds.overlap(sprite) && !handGroup.contains(sprite))
         {
           if(spot.playerName != '') table.players.find(x => x.name === spot.playerName).spotCards.push(card);
         }
       });
     });
+
+    //check to see which cards are in your hand
+    handGroup.forEach(sprite => {
+      var card = {
+        id: sprite.id,
+        x: sprite.x,
+        y: sprite.y,
+        isFaceUp: sprite.isFaceUp
+      }
+      logMessage('card in hand...');
+
+      //TODO!!!! CHECK TO MAKE SURE TO ONLY ADD THE PLAYER'S HANDCARDS OVER THE HAND AREA!!
+      if(handArea.overlap(sprite))
+      {
+        var cardNotInHand = table.players.find(x => x.name === username).handCards.findIndex(cc => cc.id === sprite.id) === -1; 
+        if(cardNotInHand) table.players.find(x => x.name === username).handCards.push(card);
+      }
+      
+      
+    });
+
     
   }
 
@@ -848,14 +919,14 @@ function getFullTableLayout()
       {
         sprite.bringToTop();
         game.add.tween(sprite).to( {x: card.x,
-                                    y: card.y}, animSpeed, "Sine", true, 0);
+                                    y: card.y}, animSpeed, "Sine", true);
         sprite.isFaceUp = card.isFaceUp;
         tableizeCard(sprite);
         rotateCard(sprite, 0);
       }
     });
 
-    //move the spot cards to their places
+    //move the spot and hand cards to their places
     table.players.forEach(player => {
       player.spotCards.forEach(card => {
           var spot = playerSpots.find(x => x.playerName === player.name);
@@ -864,13 +935,58 @@ function getFullTableLayout()
           {
             sprite.bringToTop();
             game.add.tween(sprite).to( {x: spot.x + 80,
-                                        y: spot.y + 80}, animSpeed, "Sine", true, 0);
+                                        y: spot.y + 80,
+                                        angle:getSpotRotationAngle(spot)}, 
+                                        animSpeed, "Sine", true);
             sprite.isFaceUp = card.isFaceUp;
             tableizeCard(sprite);
-            arrangeCardInSpot(spot, sprite);
           }
-      })
+      });
+
+      var counter = 0;
+      player.handCards.forEach(card => {
+          
+            //put the cards where they belong.
+            if(player.name === username)
+            {
+              //all good.
+              handGroup.add(sprite);
+            } else {
+              counter++;
+              logMessage("Moving card to " + player.name + "'s hand.");
+              var spot = playerSpots.find(x => x.playerName === player.name);
+              sprite = allCardSprites[card.id];
+              if(sprite != undefined)
+              {
+                sprite.bringToTop();
+
+                //how to stagger.
+                var xStagger, yStagger, xOffset = 0;
+                if(spot.id === 0 || spot.id === 4)
+                {
+                  xStagger = 0;
+                  yStagger = 4;
+                  if(spot.id === 4) xOffset = spot.bounds.width;
+                } else if(spot.id === 1 || spot.id === 2 || spot.id === 3)
+                {
+                  xStagger = 4;
+                  yStagger = 0;
+                }
+              game.add.tween(sprite).to( {x: spot.x + (xStagger * counter) + xOffset,
+                                        y: spot.y + (yStagger * counter),
+                                        angle:getSpotRotationAngle(spot)}, 
+                                        animSpeed, "Sine", true);
+              sprite.isFaceUp = true;
+              flipCard(sprite);
+              tableizeCard(sprite);
+              handGroup.add(sprite);
+            }
+            
+            
+          }
+      });
     });
+
 
   }
 
