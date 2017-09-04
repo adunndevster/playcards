@@ -1143,6 +1143,7 @@ function getFullTableLayout()
       logMessage('sending the table');
       //compile all of the game state and send it over.
       compileTable();
+      updateLabels();
       socket.emit('setup table', table);
     }
   });
