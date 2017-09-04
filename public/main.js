@@ -100,7 +100,7 @@ function preload() {
   game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
   game.scale.setMinMax(400, 225, 1920, 1080);
 
-  var basePath = '/decks/classic/';
+  var basePath = '/decks/six_decks/';
   
   //bg
   game.load.image('bg', basePath + cardPaths.bg);
@@ -326,7 +326,26 @@ function shuffle (array) {
 }
 
 function btnDeal_Up(){
-  
+  playerSpots.filter(spot => spot.playerName !== '').forEach(spot => {
+    //get the top card from the draggroup, and send 1 card to each player
+    for(var i=0; i<3; i++)
+    {
+      if(dragGroup.length > 0)
+      {
+        var topSprite = dragGroup.getTop();
+        game.add.tween(topSprite).to( {x: spot.x + 80,
+                                    y: spot.y + 80,
+                                    angle:getSpotRotationAngle(spot)}, 
+                                    250, "Sine", true);
+        tableGroup.add(topSprite);
+        tableizeCard(topSprite);
+      }
+    }
+  });
+
+  //SERVER
+  compileTable();
+  socket.emit('update table', table);
 }
 
 function flipCard(sprite)
@@ -719,7 +738,7 @@ function arrangeCardsInHand()
   tempArray.forEach(sprite => tableGroup.add(sprite));
 
   logMessage('handGroup.length: ' + handGroup.length);
-  handGroup.sort('x', Phaser.Group.SORT_ASCENDING);
+  
   var gap = (handArea.width - 60) / handGroup.length;
   if(gap > CARD_WIDTH_MED + 5) gap = CARD_WIDTH_MED + 5;
   var counter = 0;
@@ -731,6 +750,8 @@ function arrangeCardsInHand()
 
   //put the cards that don't belong to this player back in the hand group.
   tempArray.forEach(sprite => handGroup.add(sprite));
+
+  handGroup.sort('x', Phaser.Group.SORT_ASCENDING);
 }
 
 function removeCardFromHand(thisSprite)
@@ -961,19 +982,21 @@ function getFullTableLayout()
                 sprite.bringToTop();
 
                 //how to stagger.
-                var xStagger, yStagger, xOffset = 0;
+                var xStagger, yStagger, xOffset = 0, yOffset = 0;
                 if(spot.id === 0 || spot.id === 4)
                 {
                   xStagger = 0;
                   yStagger = 4;
+                  yOffset = spot.bounds.height/2;
                   if(spot.id === 4) xOffset = spot.bounds.width;
                 } else if(spot.id === 1 || spot.id === 2 || spot.id === 3)
                 {
                   xStagger = 4;
                   yStagger = 0;
+                  xOffset = spot.bounds.width - 25;
                 }
               game.add.tween(sprite).to( {x: spot.x + (xStagger * counter) + xOffset,
-                                        y: spot.y + (yStagger * counter),
+                                        y: spot.y + (yStagger * counter) + yOffset,
                                         angle:getSpotRotationAngle(spot)}, 
                                         animSpeed, "Sine", true);
               sprite.isFaceUp = true;
@@ -1017,6 +1040,32 @@ function getFullTableLayout()
       spot.label.setText(player.name);
       spot.playerName = player.name;
     });
+  }
+
+  function returnCardsToTable(player){
+
+    logMessage("returning player " + player.name + "'s cards back to the table." )
+    
+    player.spotCards.forEach(card => {
+      var sprite = allCardSprites.find(sprite => sprite.id === card.id);
+      game.add.tween(sprite).to( {x: 250,
+                                  y: 200}, 
+                                  250, "Sine", true);
+      rotateCard(sprite, 0);
+      tableizeCard(sprite);
+      tableGroup.add(sprite);
+    });
+
+    player.handCards.forEach(card => {
+      var sprite = allCardSprites.find(sprite => sprite.id === card.id);
+      game.add.tween(sprite).to( {x: 250,
+                                  y: 200}, 
+                                  250, "Sine", true);
+      rotateCard(sprite, 0);
+      tableizeCard(sprite);
+      tableGroup.add(sprite);
+    });
+
   }
 
   // Prevents input from having injected markup
@@ -1152,10 +1201,18 @@ function getFullTableLayout()
   socket.on('user left', function (data) {
     logMessage(data.username + ' left');
     table.openSpots.unshift(table.players.find(x => x.name === data.username).spot);
+
+    //return all of the players cards to the table
+    var player = table.players.find(player => player.name === data.username);
+    returnCardsToTable(player);
+
     table.players = table.players.filter(function( player ) {
                                       return player.name !== data.username;
                                   });
-                                
+    //SERVER
+    compileTable();
+    socket.emit('update table', table);
+
     logMessage(table.players);
   });
 

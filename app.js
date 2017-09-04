@@ -110,7 +110,7 @@ io.on('connection', function (socket) {
 
 
 //generate card array
-const cardsFolder = './public/decks/classic/';
+const cardsFolder = './public/decks/six_decks/';
 const fs = require('fs');
 var cardsobj = {
   bg: '',
@@ -143,7 +143,16 @@ fs.readdir(cardsFolder, (err, files) => {
     
   });
 
-  console.log(cardsobj);
+  fs.writeFile("./cardz.txt", JSON.stringify(cardsobj, null, "\t"), function(err) {
+    if(err) {
+        return console.log(err);
+    }
+
+    console.log("The file was saved!");
+}); 
+
+
+  //console.log(cardsobj);
 });
 
 
