@@ -26,17 +26,18 @@ const CARD_WIDTH_SM = 50, CARD_HEIGHT_SM = 73;
 playerSpot = {
   id:0,
   x: 0,
-  y: 180,
+  y: -422,
   label: null,
   bounds: null,
-  playerName: ''
+  playerName: '',
+  group: null
 }
 playerSpots.push(playerSpot);
 
 playerSpot = {
   id:1,
-  x: 122,
-  y: 0,
+  x: 166,
+  y: -422,
   label: null,
   bounds: null
 }
@@ -44,8 +45,8 @@ playerSpots.push(playerSpot);
 
 playerSpot = {
   id:2,
-  x: 389,
-  y: 0,
+  x: 336,
+  y: -422,
   label: null,
   bounds: null
 }
@@ -53,8 +54,8 @@ playerSpots.push(playerSpot);
 
 playerSpot = {
   id:3,
-  x: 658,
-  y: 0,
+  x: 504,
+  y: -422,
   label: null,
   bounds: null
 }
@@ -62,8 +63,8 @@ playerSpots.push(playerSpot);
 
 playerSpot = {
   id:4,
-  x: 835,
-  y: 180,
+  x: 672,
+  y: -422,
   label: null,
   bounds: null
 }
@@ -71,8 +72,8 @@ playerSpots.push(playerSpot);
 
 playerSpot = {
   id:5,
-  x: 389,
-  y: 414,
+  x: 336,
+  y: 963,
   label: null,
   bounds: null
 }
@@ -107,6 +108,9 @@ function preload() {
 
   //hand hit area
   game.load.image('hitArea', 'images/hitArea.png');
+
+  //player spot
+  game.load.image('playerSpot', 'images/gPlayerSpot.png');
 
   //buttons
   game.load.image('btnStagger', 'images/btnStagger.png');
@@ -152,13 +156,34 @@ handArea.y = bg.height;
 var newSpot;
 for(var i=0; i<playerSpots.length; i++)
 {
-  newSpot = game.add.sprite(playerSpots[i].x, playerSpots[i].y, 'hitArea');
-  newSpot.width = (i !== 0 && i !== 4) ? SPOT_WIDTH : SPOT_HEIGHT;
-  newSpot.height = (i !== 0 && i !== 4) ? SPOT_HEIGHT : SPOT_WIDTH;
-  newSpot.label = addText('', playerSpots[i].x + 10, playerSpots[i].y + 6);
-  newSpot.label.alpha = .6;
+  newSpot = game.add.sprite(playerSpots[i].x, playerSpots[i].y, 'playerSpot');
+  newSpot.id = i;
+  newSpot.x = playerSpots[i].x + newSpot.width/2;
+  //newSpot.width = (i !== 0 && i !== 4) ? SPOT_WIDTH : SPOT_HEIGHT;
+  //newSpot.height = (i !== 0 && i !== 4) ? SPOT_HEIGHT : SPOT_WIDTH;
+  newSpot.anchor = new Phaser.Point(.5, 0);
+  
+  //input for the group...
+  newSpot.inputEnabled = true;
+  newSpot.input.pixelPerfectAlpha = 100;
+  newSpot.input.pixelPerfectClick = true;
+  //newSpot.input.pixelPerfectOver = true;
+  newSpot.events.onInputUp.add(playerSpot_OnUp);
+
+  //newSpot.label.alpha = .6;
+  if(i === 5)
+  {
+    newSpot.label = addText('', newSpot.x, newSpot.y - newSpot.height + 12);
+    newSpot.angle = 180;
+  } else {
+    newSpot.label = addText('', newSpot.x, playerSpots[i].y + newSpot.height - 10);
+  }
   playerSpots[i].label = newSpot.label;
   playerSpots[i].bounds = newSpot;
+  playerSpots[i].group = game.add.group();
+  playerSpots[i].group.add(newSpot);
+  playerSpots[i].group.add(newSpot.label);
+  playerSpots[i].isHidden = true;
 }
 
 
@@ -373,6 +398,19 @@ function card_OnDown(thisSprite) {
 
 function card_OnUp(thisSprite) {
 
+}
+
+//PLAYER SPOT INPUT//////////////////////////
+function playerSpot_OnUp(spotSprite) {
+  var newY;
+  if(spotSprite.id != 5){
+    newY = playerSpots[spotSprite.id].isHidden ? 422 : 0;
+  } else {
+    newY = playerSpots[spotSprite.id].isHidden ? -422 : 0;
+  }
+
+  game.add.tween(playerSpots[spotSprite.id].group).to({y:newY}, 250, "Sine", true);
+  playerSpots[spotSprite.id].isHidden = !playerSpots[spotSprite.id].isHidden;
 }
 
 
@@ -779,16 +817,11 @@ function removeCardFromHand(thisSprite)
 //TEXT/////////////
 function addText(textString, x, y)
 {
-  text = game.add.text(x, y, textString);
-  //text.anchor.set(0);
-  text.align = 'left';
+  var style = { font: "bold 16px Arial", fill: "#ffffff", boundsAlignH: "center", boundsAlignV: "middle" };
+  text = game.add.text(x, y, textString, style);
+  text.anchor.set(0.5, .5);
 
-  text.font = 'Arial Black';
-  text.fontSize = 16;
-  text.fontWeight = 'bold';
-  text.fill = '#ffffff';
-
-  text.setShadow(0, 0, 'rgba(0, 0, 0, 0.5)', 0);
+  //text.setShadow(0, 0, 'rgba(0, 0, 0, 0.5)', 1);
 
   return text;
 }
