@@ -94,7 +94,7 @@ var rectStartPoint = new Phaser.Point(0,0);
 var rectMouseDown = false;
 var cardSelectionPosition;
 var selectionDidChange = false;
-var tableGroup, dragGroup, handGroup, actionButtonGroup;
+var tableGroup, dragGroup, handGroup, actionButtonGroup, spotsGroup;
 var dragArray = [], allCardSprites = [];
 
 function preload() {
@@ -141,6 +141,13 @@ function create() {
  bg.events.onInputUp.add(bg_Mouse_Up, this);
  bg.cacheAsBitmap = true;
  bg.smoothed = true;
+
+ //setup groups
+ tableGroup = game.add.group();
+ handGroup = game.add.group();
+ spotsGroup = game.add.group();
+ dragGroup = game.add.group();
+ actionButtonGroup = game.add.group();
   
 //hand area
 handArea = game.add.sprite(0, 0, 'hitArea');
@@ -151,6 +158,7 @@ handArea.input.useHandCursor = true;
 handArea.anchor = new Phaser.Point(1, 1);
 handArea.x = bg.width;
 handArea.y = bg.height;
+
 
 //playerspots
 var newSpot;
@@ -183,14 +191,11 @@ for(var i=0; i<playerSpots.length; i++)
   playerSpots[i].group = game.add.group();
   playerSpots[i].group.add(newSpot);
   playerSpots[i].group.add(newSpot.label);
+  spotsGroup.add(playerSpots[i].group);
   playerSpots[i].isHidden = true;
 }
 
-
- tableGroup = game.add.group();
- handGroup = game.add.group();
- dragGroup = game.add.group();
- actionButtonGroup = game.add.group();
+ 
 
  //action buttons
 addActionButtons();
@@ -402,15 +407,46 @@ function card_OnUp(thisSprite) {
 
 //PLAYER SPOT INPUT//////////////////////////
 function playerSpot_OnUp(spotSprite) {
+  togglePlayerSpot(spotSprite);
+}
+function openPlayerSpot(spotSprite)
+{
+  playerSpots[spotSprite.id].isHidden = false;
+  game.add.tween(playerSpots[spotSprite.id].group).to({y:getToggleSpotPosition(spotSprite)}, 250, "Sine", true);
+  //spotsGroup.bringToTop(playerSpots[spotSprite.id].group);
+
+  closePlayerSpots(spotSprite);
+}
+function togglePlayerSpot(spotSprite)
+{
+  
+  playerSpots[spotSprite.id].isHidden = !playerSpots[spotSprite.id].isHidden;
+  game.add.tween(playerSpots[spotSprite.id].group).to({y:getToggleSpotPosition(spotSprite)}, 250, "Sine", true);
+  //spotsGroup.bringToTop(playerSpots[spotSprite.id].group);
+
+  closePlayerSpots(spotSprite);
+}
+function closePlayerSpots(spotSprite)
+{
+  spotsGroup.forEach(spotGroup => {
+    var sprite = spotGroup.getChildAt(0);
+    if(sprite !== spotSprite)
+    {
+      playerSpots[sprite.id].isHidden = true;
+      game.add.tween(playerSpots[sprite.id].group).to({y:getToggleSpotPosition(sprite)}, 250, "Sine", true);
+    }
+  });
+}
+function getToggleSpotPosition(spotSprite)
+{
   var newY;
   if(spotSprite.id != 5){
-    newY = playerSpots[spotSprite.id].isHidden ? 422 : 0;
+    newY = playerSpots[spotSprite.id].isHidden ? 0 : 422;
   } else {
-    newY = playerSpots[spotSprite.id].isHidden ? -422 : 0;
+    newY = playerSpots[spotSprite.id].isHidden ? 0 : -422;
   }
 
-  game.add.tween(playerSpots[spotSprite.id].group).to({y:newY}, 250, "Sine", true);
-  playerSpots[spotSprite.id].isHidden = !playerSpots[spotSprite.id].isHidden;
+  return newY;
 }
 
 
@@ -430,6 +466,15 @@ function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
   {
     logMessage('card(s) over hand area');
   }
+
+  //are we dragging the drag group over the playerspots?
+  spotsGroup.forEach(group => {
+    var sprite = group.getChildAt(0);;
+    if(sprite.overlap(thisSprite))
+    {
+      openPlayerSpot(sprite);
+    }
+  });
 
   //if the sprite being dragged isn't in the card selection
   if(dragArray.indexOf(thisSprite) == -1)
@@ -524,6 +569,8 @@ function render() {
     resetCardSelection();
     
     drawCardSelectionRect(x, y);
+
+    closePlayerSpots();
 
   }
 
