@@ -1,5 +1,8 @@
 var cardPaths = {
 	"bg": "/bg/bg.png",
+	"images": {
+		"handOfCards": "/images/HandOfCards.png"
+	},
 	"cardBacks": [
 		{
 			"image": "/bg/card-back.png"

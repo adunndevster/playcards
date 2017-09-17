@@ -114,6 +114,7 @@ const cardsFolder = './public/decks/six_decks/';
 const fs = require('fs');
 var cardsobj = {
   bg: '',
+  images: new Object(),
   cardBacks: [],
   cards: []
 }
@@ -122,7 +123,12 @@ var cardsobj = {
 
 //bg
 fs.readdir(cardsFolder + "bg/", (err, files) => {
-  cardsobj.bg = '/bg/' + files[0];
+  cardsobj.bg = '/bg/bg.png';
+});
+
+//images
+fs.readdir(cardsFolder + "images/", (err, files) => {
+  cardsobj.images.handOfCards = '/images/HandOfCards.png';
 });
 
 //cards
