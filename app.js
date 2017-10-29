@@ -8,7 +8,7 @@ var server = require('http').createServer(app);
 //var io = require('../..')(server);
 var io = require('socket.io')(server);
 var port = process.env.PORT || 3000;
-var hostId = null;
+var roomsObj = new Object();
 
 server.listen(port, function () {
   console.log('Server listening at port %d', port);
@@ -19,8 +19,6 @@ app.use(express.static(__dirname + '/public'));
 
 // Chatroom
 
-var numUsers = 0;
-
 io.on('connection', function (socket) {
   var addedUser = false;
 
@@ -29,23 +27,31 @@ io.on('connection', function (socket) {
     if (addedUser) return;
 
     socket.username = player.name;
-    ++numUsers;
+    socket.room = player.room;
+    if(roomsObj[socket.room] === undefined) roomsObj[socket.room] = {hostId: null, numUsers:0};
+
+    ++roomsObj[socket.room].numUsers;
     addedUser = true;
+    socket.join(player.room);
+    console.log(socket.username + ' joined the room "' + socket.room + '"');
     socket.emit('login', {
-      numUsers: numUsers
+      numUsers: roomsObj[socket.room].numUsers
     });
     // echo globally (all clients) that a person has connected
-    socket.broadcast.emit('user joined', {
+    socket.broadcast.to(socket.room).emit('user joined', {
       player: player,
-      numUsers: numUsers
+      numUsers: roomsObj[socket.room].numUsers
     });
 
     // we store the username in the socket session for this client
     //do we already have a host? If so, get the state of the game from player 1,
     //and broadcast it back to all of the players.
-    if(hostId === null) //there is a host.
+    console.log(roomsObj[socket.room].hostId);
+    if(roomsObj[socket.room].hostId === null) //there is a host.
     {
-      hostId = socket.id;
+      roomsObj[socket.room].hostId = socket.id;
+      console.log('new host for room "' + socket.room + '", ' + roomsObj[socket.room].hostId);
+      console.log(JSON.stringify(roomsObj));
       //io.to(hostId).emit('secret', 'for your eyes only');
     }
   });
@@ -54,20 +60,20 @@ io.on('connection', function (socket) {
   // when the user disconnects.. perform this
   socket.on('disconnect', function () {
     if (addedUser) {
-      --numUsers;
+      --roomsObj[socket.room].numUsers;
       
-      if(hostId == socket.id || numUsers === 0)
+      if(roomsObj[socket.room].hostId == socket.id || roomsObj[socket.room].numUsers === 0)
       {
-        hostId = null;
+        roomsObj[socket.room].hostId = null;
         
         //now audition for a new host.
-        socket.broadcast.emit('auditions');
+        socket.broadcast.to(socket.room).emit('auditions');
       } 
 
       // echo globally that this client has left
-      socket.broadcast.emit('user left', {
+      socket.broadcast.to(socket.room).emit('user left', {
         username: socket.username,
-        numUsers: numUsers
+        numUsers: roomsObj[socket.room].numUsers
       });
     }
   });
@@ -75,30 +81,26 @@ io.on('connection', function (socket) {
 
   socket.on('sign me up', function(){
     
-    if(hostId == null)
+    if(roomsObj[socket.room].hostId == null)
     {
-      hostId = socket.id;
-      io.to(hostId).emit('assign host');
+      roomsObj[socket.room].hostId = socket.id;
+      io.to(socket.id).emit('assign host');
     }
   });
 
   // when a non-host player joins, they will ask for the state of the table.
   socket.on('setup table', function(table){
 
-    if(player.spot == -1)
-    {
-      player.spot = table.openSpots.shift();
-    }
-
     //for now, the host will be our source of truth.
-    socket.broadcast.emit('synchronize tables', {
+    socket.broadcast.to(socket.room).emit('synchronize tables', {
       table: table
     });
   });
 
   socket.on('update table', function(table){
+    console.log('room: ' + socket.room);
     //for now, the host will be our source of truth.
-    socket.broadcast.emit('synchronize tables', {
+    socket.broadcast.to(socket.room).emit('synchronize tables', {
       table: table
     });
   })
@@ -110,7 +112,7 @@ io.on('connection', function (socket) {
 
 
 //generate card array
-const cardsFolder = './public/decks/six_decks/';
+const cardsFolder = './public/decks/classic/';
 const fs = require('fs');
 var cardsobj = {
   bg: '',

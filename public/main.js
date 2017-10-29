@@ -1,5 +1,13 @@
 $(function(){
 
+  var gameRoom = getParameterByName('game');
+
+//get the right deck...
+$.getScript("decks/" + gameRoom + "/cards.js", function() {
+  
+
+});
+
 //top level object
 var table = {
   players: [],
@@ -99,11 +107,13 @@ var tableGroup, dragGroup, handGroup, actionButtonGroup, spotsGroup;
 var allCardSprites = [];
 var isSynchRequired;
 
+
 function preload() {
+  
   game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
   game.scale.setMinMax(400, 225, 1920, 1080);
 
-  var basePath = '/decks/six_decks/';
+  var basePath = '/decks/' + gameRoom + '/';
   
   //bg
   game.load.image('bg', basePath + cardPaths.bg);
@@ -979,6 +989,7 @@ function getFullTableLayout()
 
       // Tell the server about yourself.
       player.name = username;
+      player.room = gameRoom;
       socket.emit('add user', player);
     }
   }
@@ -1372,6 +1383,7 @@ function getFullTableLayout()
         if(player.spot == -1)
         {
           player.spot = table.openSpots.shift();
+          logMessage('assigning ' + player.name + ' spot ' + player.spot);
         }
         
       });
@@ -1388,14 +1400,16 @@ function getFullTableLayout()
     logMessage(data.username + ' left');
     table.openSpots.unshift(table.players.find(x => x.name === data.username).spot);
 
+    table.players = table.players.filter(function( player ) {
+                                      return player.name !== data.username;
+                                  });
+
     //return all of the players cards to the table
     //synchTable(true);
     returnCardsToTable();
     //synchTable(false);
 
-    table.players = table.players.filter(function( player ) {
-                                      return player.name !== data.username;
-                                  });
+    
     updateLabels();
     //SERVER
     // compileTable();
@@ -1495,7 +1509,14 @@ function logMessage(message)
 
 
 
-//UTILITIES
-function rotateArray(arr){
-    arr.unshift(arr.pop());
-} 
+
+
+function getParameterByName(name, url) {
+  if (!url) url = window.location.href;
+  name = name.replace(/[\[\]]/g, "\\$&");
+  var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+      results = regex.exec(url);
+  if (!results) return null;
+  if (!results[2]) return '';
+  return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
