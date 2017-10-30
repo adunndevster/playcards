@@ -1,14 +1,13 @@
-$(function(){
-
-  var gameRoom = getParameterByName('game');
+var gameRoom = getParameterByName('game');
 
 //get the right deck...
 $.getScript("/decks/" + gameRoom + "/cards.js", function() {
   
+logMessage("Loaded.")
 
-});
-
-//top level object
+$(function(){
+  
+    //top level object
 var table = {
   players: [],
   tableCards: [], //an array of cards... because cards don't HAVE to be in piles
@@ -1444,6 +1443,10 @@ function getFullTableLayout()
 
 
 });
+
+
+});
+
 
 
 
