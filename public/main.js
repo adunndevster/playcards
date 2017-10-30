@@ -3,7 +3,7 @@ $(function(){
   var gameRoom = getParameterByName('game');
 
 //get the right deck...
-$.getScript("decks/" + gameRoom + "/cards.js", function() {
+$.getScript("/decks/" + gameRoom + "/cards.js", function() {
   
 
 });
