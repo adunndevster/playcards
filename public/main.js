@@ -1,12 +1,48 @@
-var gameRoom = getParameterByName('game');
+var gameRoomInfo = getParameterByName('game').split('~~~');
+var gameRoom = gameRoomInfo[0];
+var gameId = gameRoomInfo[1];
+var gameRoomFull = gameRoom + "~~~" + gameId;;
+var baseUrl = (window.location.href.indexOf('localhost') > -1) ? 'http://localhost:5000/' : 'http://cardslanding.azurewebsites.net/';
+if(gameId === undefined)
+{
+  gameId = generateGameRoomId();
+  gameRoomFull = gameRoom + "~~~" + gameId;
+  window.history.pushState("Cardslanding", "Cardslanding", "?game=" + gameRoomFull);
+}
+$('.gameUrl').html("<a href=\"javascript:copyToClipboard('" + window.location.href + "')\">" + gameRoomFull + "</a>")
+
 
 //get the right deck...
 $.getScript("/decks/" + gameRoom + "/cards.js", function() {
   
 logMessage("Loaded.")
 
+
+
 $(function(){
   
+  //get the user details
+$.ajax({
+  type: "GET",    
+  url: baseUrl + "api/external/getuserdetails",
+  cache: false,
+  crossDomain: true,
+  dataType: 'json',
+  xhrFields: {
+      withCredentials: true
+  },
+  success: function (data) {
+    if(data.success)
+    {
+      setUsername(data.email);
+    } else {
+      window.location = baseUrl + 'Account/Login?referrer=game&returnUrl=' + window.location.href;
+    }
+  },
+  fail: function(){
+    window.location = baseUrl + 'Account/Login?referrer=game&returnUrl=' + window.location.href;
+  }
+});
     //top level object
 var table = {
   players: [],
@@ -977,8 +1013,8 @@ function getFullTableLayout()
   // }
 
   // Sets the client's username
-  function setUsername () {
-    username = cleanInput($usernameInput.val().trim());
+  function setUsername (name) {
+    username = cleanInput(name.trim());
     
     // If the username is valid
     if (username) {
@@ -988,7 +1024,7 @@ function getFullTableLayout()
 
       // Tell the server about yourself.
       player.name = username;
-      player.room = gameRoom;
+      player.room = gameRoomFull;
       socket.emit('add user', player);
     }
   }
@@ -1522,4 +1558,25 @@ function getParameterByName(name, url) {
   if (!results) return null;
   if (!results[2]) return '';
   return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+function generateGameRoomId()
+{
+  var text = "";
+  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+  for (var i = 0; i < 6; i++)
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+  return text;
+}
+
+function copyToClipboard(text) {
+  alert(text);
+  var $temp = $("<input type='text' value='" + text + "'></input>");
+  $("body").append($temp);
+  $temp.select();
+  alert($temp.val());
+  document.execCommand("copy");
+  $temp.remove();
 }

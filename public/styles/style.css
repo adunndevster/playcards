@@ -152,3 +152,19 @@ ul {
   width:100%;
   height: 100%;
 }
+
+.gameUrl{
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 10px;
+  background-color: black;
+  opacity: .6;
+  color: white;
+  font-weight: bold;
+  border-radius: 8px;
+}
+
+.gameUrl a{
+  color:white;
+}
