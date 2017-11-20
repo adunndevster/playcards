@@ -61,16 +61,16 @@ var player = {
 //set up the player spots.
 var playerSpots = [];
 var playerSpot;
-const  SPOT_WIDTH = 180, SPOT_HEIGHT= 126;
-const CARD_WIDTH_LARGE = 320, CARD_HEIGHT_LARGE = 465;
-const CARD_WIDTH_MED = 100, CARD_HEIGHT_MED = 145;
-const CARD_WIDTH_SM = 50, CARD_HEIGHT_SM = 73;
-const CARD_WIDTH_TINY = 22, CARD_HEIGHT_TINY = 32;
+const  SPOT_WIDTH = 360, SPOT_HEIGHT= 252;
+const CARD_WIDTH_LARGE = 640, CARD_HEIGHT_LARGE = 930;
+const CARD_WIDTH_MED = 200, CARD_HEIGHT_MED = 290;
+const CARD_WIDTH_SM = 100, CARD_HEIGHT_SM = 146;
+const CARD_WIDTH_TINY = 44, CARD_HEIGHT_TINY = 64;
 
 playerSpot = {
   id:0,
   x: 0,
-  y: -422,
+  y: -844,
   label: null,
   bounds: null,
   playerName: '',
@@ -80,8 +80,8 @@ playerSpots.push(playerSpot);
 
 playerSpot = {
   id:1,
-  x: 166,
-  y: -422,
+  x: 336,
+  y: -844,
   label: null,
   bounds: null
 }
@@ -89,8 +89,8 @@ playerSpots.push(playerSpot);
 
 playerSpot = {
   id:2,
-  x: 336,
-  y: -422,
+  x: 672,
+  y: -844,
   label: null,
   bounds: null
 }
@@ -98,8 +98,8 @@ playerSpots.push(playerSpot);
 
 playerSpot = {
   id:3,
-  x: 504,
-  y: -422,
+  x: 1008,
+  y: -844,
   label: null,
   bounds: null
 }
@@ -107,8 +107,8 @@ playerSpots.push(playerSpot);
 
 playerSpot = {
   id:4,
-  x: 672,
-  y: -422,
+  x: 1345,
+  y: -844,
   label: null,
   bounds: null
 }
@@ -116,8 +116,8 @@ playerSpots.push(playerSpot);
 
 playerSpot = {
   id:5,
-  x: 336,
-  y: 963,
+  x: 672,
+  y: 1923,
   label: null,
   bounds: null
 }
@@ -128,7 +128,7 @@ playerSpots.push(playerSpot);
 var $window = $(window);
 var $usernameInput = $('.usernameInput'); // Input for username
 
-var game = new Phaser.Game(960, 540, Phaser.CANVAS, 'gameContainer', { preload: preload, create: create, update: update });
+var game = new Phaser.Game(1920, 1080, Phaser.CANVAS, 'gameContainer', { preload: preload, create: create, update: update });
 var isHost = false;
 var bg, handArea, handGraphic;
 const CARD_SCALE = .3;
@@ -293,35 +293,35 @@ addActionButtons();
 //ACTION BUTTONS/////////////////////
 function addActionButtons()
 {
-  const gap = 20;
+  const gap = 40;
 
   var btnStagger = game.add.sprite(0, 0, 'btnStagger');
   btnStagger.x = gap;
-  btnStagger.y = bg.height - 120;
+  btnStagger.y = bg.height - 240;
   btnStagger.inputEnabled = true;
   btnStagger.events.onInputUp.add(btnStagger_Up);
 
   var btnShuffle = game.add.sprite(0, 0, 'btnShuffle');
   btnShuffle.x = gap + btnShuffle.width;
-  btnShuffle.y = bg.height - 120;
+  btnShuffle.y = bg.height - 240;
   btnShuffle.inputEnabled = true;
   btnShuffle.events.onInputUp.add(btnShuffle_Up);
 
   var btnFlip = game.add.sprite(0, 0, 'btnFlip');
   btnFlip.x = gap + btnShuffle.width*2;
-  btnFlip.y = bg.height - 120;
+  btnFlip.y = bg.height - 240;
   btnFlip.inputEnabled = true;
   btnFlip.events.onInputUp.add(btnFlip_Up);
 
   var btnDeckify = game.add.sprite(0, 0, 'btnDeckify');
   btnDeckify.x = gap + btnShuffle.width*3;
-  btnDeckify.y = bg.height - 120;
+  btnDeckify.y = bg.height - 240;
   btnDeckify.inputEnabled = true;
   btnDeckify.events.onInputUp.add(btnDeckify_Up);
 
   var btnDeal = game.add.sprite(0, 0, 'btnDeal');
   btnDeal.x = gap + btnShuffle.width*4;
-  btnDeal.y = bg.height - 120;
+  btnDeal.y = bg.height - 240;
   btnDeal.inputEnabled = true;
   btnDeal.events.onInputUp.add(btnDeal_Up);
 
