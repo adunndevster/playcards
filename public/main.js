@@ -669,6 +669,7 @@ function render() {
       sprite.input.enableDrag(false, true, false, 255, null);
       sprite.dx = sprite.dy = undefined;
     });
+    dragArray = [];
 
     doCardSelection();
 
@@ -695,7 +696,7 @@ function render() {
     selectionDidChange = undefined;
     cardSelectionPosition = undefined;
 
-    game.add.tween(actionButtonGroup).to({alpha:0, y: 100}, 250, "Sine", true);
+    game.add.tween(actionButtonGroup).to({alpha:0, y: 100}, 100, "Sine", true);
   }
 
 
@@ -752,7 +753,7 @@ function bg_Mouse_Up(){
   if(dragGroup.length > 0)
   {
     cardSelectionPosition = new Phaser.Point(dragGroup.children[0].x, dragGroup.children[0].y); //track the first cards position to see if it ever changes.
-    game.add.tween(actionButtonGroup).to({alpha:1, y: 10}, bg.height - 150, "Sine", true);
+    game.add.tween(actionButtonGroup).to({alpha:1, y: 10}, 100, "Sine", true);
     logMessage(username + " selected some cards."); //TODO:SERVER 
   }
 }
@@ -898,26 +899,28 @@ function arrangeCardsInHand()
   var gap = (handArea.width - 60) / handGroup.length;
   if(gap > CARD_WIDTH_MED + 5) gap = CARD_WIDTH_MED + 5;
   var counter = 0;
+  handGroup.sort('x', Phaser.Group.SORT_DESCENDING);
   handGroup.forEach(sprite => {
-    handGroup.sort('x', Phaser.Group.SORT_DESCENDING);
     let newX = bg.width - (CARD_WIDTH_MED/2) - (gap * counter);
     let newY = bg.height;
     var tween = game.add.tween(sprite).to({x:newX,
                                y:newY,
+                               //alpha:.5,
                                width:CARD_WIDTH_MED, 
-                               height:CARD_HEIGHT_MED}, 250, "Sine", true);
+                               height:CARD_HEIGHT_MED}, 100, "Sine", true);
+                               
     tween.onComplete.add(sortHand, this);
+    
     function sortHand()
     {
-      handGroup.forEach(sprite => {
-        handGroup.sort('x', Phaser.Group.SORT_ASCENDING);
-        //handGroup.sendToBack(sprite);
-      });
+      handGroup.sort('x', Phaser.Group.SORT_ASCENDING);
     }
+    
     
     sprite.input.enableDrag(false, true, false, 255, null);
     counter++;
   });
+
 
   //put the cards that don't belong to this player back in the hand group.
   tempArray.forEach(sprite => handGroup.add(sprite));
@@ -1495,7 +1498,9 @@ function logMessage(message)
   if(debug) console.log(message);
 }
 
-
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 
 
