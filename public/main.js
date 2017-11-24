@@ -74,7 +74,8 @@ playerSpot = {
   label: null,
   bounds: null,
   playerName: '',
-  group: null
+  group: null,
+  items: null
 }
 playerSpots.push(playerSpot);
 
@@ -235,21 +236,24 @@ for(var i=0; i<playerSpots.length; i++)
   newSpot.input.pixelPerfectAlpha = 100;
   newSpot.input.pixelPerfectClick = true;
   //newSpot.input.pixelPerfectOver = true;
+  newSpot.events.onInputDown.add(bg_Mouse_Down, this);
   newSpot.events.onInputUp.add(playerSpot_OnUp);
 
   //newSpot.label.alpha = .6;
   if(i === 5)
   {
-    newSpot.label = addText('', newSpot.x, newSpot.y - newSpot.height + 12);
+    newSpot.label = addText('', newSpot.x, newSpot.y - newSpot.height + 24);
     newSpot.angle = 180;
   } else {
-    newSpot.label = addText('', newSpot.x, playerSpots[i].y + newSpot.height - 10);
+    newSpot.label = addText('', newSpot.x, playerSpots[i].y + newSpot.height - 20);
   }
   playerSpots[i].label = newSpot.label;
   playerSpots[i].bounds = newSpot;
   playerSpots[i].group = game.add.group();
   playerSpots[i].group.add(newSpot);
   playerSpots[i].group.add(newSpot.label);
+  playerSpots[i].items = game.add.group();
+  playerSpots[i].group.add(playerSpots[i].items)
   spotsGroup.add(playerSpots[i].group);
   playerSpots[i].isHidden = true;
 }
@@ -405,9 +409,7 @@ function shuffle () {
     , temp = null;
 
   var array = dragGroup.children.slice();
-  logMessage(array[50].id);
   array = Phaser.ArrayUtils.shuffle(array);
-  logMessage(array[50].id);
 
   for (i = 0; i < array.length; i++) {
     tableGroup.add(array[i]);
@@ -463,13 +465,19 @@ function card_OnDown(thisSprite) {
   rotateCard(thisSprite, 0, true);
 }
 
-function card_OnUp(thisSprite) {
+async function card_OnUp(thisSprite) {
 
+  // resetCardSelection();
+  // await sleep(10);
+  // dragGroup.add(thisSprite);
+  // createDragGroupEffect();
+  // showActionButtonGroup();
 }
 
 //PLAYER SPOT INPUT//////////////////////////
 function playerSpot_OnUp(spotSprite) {
-  togglePlayerSpot(spotSprite);
+  openPlayerSpot(spotSprite);
+  bg_Mouse_Up(spotSprite);
 }
 function openPlayerSpot(spotSprite)
 {
@@ -486,7 +494,7 @@ function togglePlayerSpot(spotSprite)
   game.add.tween(playerSpots[spotSprite.id].group).to({y:getToggleSpotPosition(spotSprite)}, 250, "Sine", true);
   //spotsGroup.bringToTop(playerSpots[spotSprite.id].group);
 
-  closePlayerSpots(spotSprite);
+  //closePlayerSpots(spotSprite);
 }
 function closePlayerSpots(spotSprite)
 {
@@ -502,9 +510,9 @@ function getToggleSpotPosition(spotSprite)
 {
   var newY;
   if(spotSprite.id != 5){
-    newY = playerSpots[spotSprite.id].isHidden ? 0 : 422;
+    newY = playerSpots[spotSprite.id].isHidden ? 0 : 844;
   } else {
-    newY = playerSpots[spotSprite.id].isHidden ? 0 : -422;
+    newY = playerSpots[spotSprite.id].isHidden ? 0 : -844;
   }
 
   return newY;
@@ -530,6 +538,7 @@ function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
 
   //are we dragging the drag group over the playerspots?
   playerSpots.forEach(spot => {
+    //closePlayerSpots(spot);
     if(spot.bounds.overlap(thisSprite))
     {
       openPlayerSpot(spot.bounds);
@@ -563,6 +572,7 @@ function dragStop(thisSprite) {
 
   //HACK - ensure the dragged card(s) are on top
   //if(dragGroup.length == 0  && !handGroup.children.includes(thisSprite)) tableGroup.add(thisSprite);
+  closePlayerSpots();
 
   //is the dragged card over a player's spot?
   var doesOverlapASpot = false;
@@ -631,7 +641,8 @@ function render() {
     
     drawCardSelectionRect(x, y);
 
-    closePlayerSpots();
+    doCardSelection();
+    //closePlayerSpots();
 
   }
 
@@ -658,12 +669,23 @@ function render() {
   }
 
   //resets the drag array
-  function resetCardSelection(group)
+  function resetCardSelection()
   {
+    hideActionButtonGroup();
+
     if(dragGroup.length == 0) return;
 
     var dragArray = dragGroup.children.slice();
-    dragArray.forEach(function(sprite){
+    dragArray.some(function(sprite){
+      playerSpots.forEach(spot => {
+        
+        if(spot.bounds.overlap(sprite))
+        {
+          dragStop(sprite);
+          return;
+        }
+      });
+
       if(!handGroup.children.includes(sprite)) tableGroup.add(sprite);
       
       sprite.input.enableDrag(false, true, false, 255, null);
@@ -693,10 +715,12 @@ function render() {
       }
     });
 
+    
+
     selectionDidChange = undefined;
     cardSelectionPosition = undefined;
 
-    game.add.tween(actionButtonGroup).to({alpha:0, y: 100}, 100, "Sine", true);
+    
   }
 
 
@@ -720,6 +744,24 @@ function render() {
             }
           }
     } );
+
+    //do the same for the playerspots...
+    playerSpots.forEach(spot => {
+      spot.items.children.forEach(sprite => {
+        if( sprite.overlap(cardSelectionRect))
+        {
+          sprite.tint = 0xffdd00;
+        } else {
+          if(sprite.tint != 0xffffff)
+          {
+            sprite.tint = 0xffffff;
+            game.add.tween(sprite).to({width:CARD_WIDTH_SM, height:CARD_HEIGHT_SM}, 250, "Sine", true);
+            game.tweens.remove(sprite.colorFlash);
+          }
+        }
+      });
+    });
+
   }
 
 function bg_Mouse_Up(){
@@ -728,6 +770,7 @@ function bg_Mouse_Up(){
   if(cardSelectionRect === undefined) return;
 
   var dragArray = dragGroup.children.slice();
+
   tableGroup.forEach(function(sprite){
       if(sprite.overlap(cardSelectionRect))
       {
@@ -738,10 +781,22 @@ function bg_Mouse_Up(){
       }
   } );
 
-  dragArray.forEach(function(sprite){
-    dragGroup.add(sprite);
-    sprite.colorFlash = game.add.tween(sprite).to( { tint: 0xffdd00, height: sprite.height*.92, width:sprite.width*.92}, 250, "Sine", true, 0, -1, true);
+  //account for the playerspots
+  playerSpots.forEach(spot => {
+    spot.items.children.forEach(sprite => {
+      if(sprite.overlap(cardSelectionRect))
+      {
+        dragArray.push(sprite);
+        //tableGroup.add(sprite);
+        sprite.x = sprite.world.x;
+        sprite.y = sprite.world.y;
+      }
+    });
   });
+
+  createDragGroupEffect(dragArray);
+
+  
 
   if(cardSelectionRect)
   {
@@ -753,9 +808,33 @@ function bg_Mouse_Up(){
   if(dragGroup.length > 0)
   {
     cardSelectionPosition = new Phaser.Point(dragGroup.children[0].x, dragGroup.children[0].y); //track the first cards position to see if it ever changes.
-    game.add.tween(actionButtonGroup).to({alpha:1, y: 10}, 100, "Sine", true);
+    showActionButtonGroup();
     logMessage(username + " selected some cards."); //TODO:SERVER 
   }
+
+  
+}
+
+function createDragGroupEffect(dragArray)
+{
+  if(dragArray === undefined) dragArray = dragGroup.children.slice();
+  dragArray.forEach(function(sprite){
+    dragGroup.add(sprite);
+    sprite.colorFlash = game.add.tween(sprite).to( { tint: 0xffdd00, height: CARD_HEIGHT_SM*.92, width:CARD_WIDTH_SM*.92}, 250, "Sine", true, 0, -1, true);
+  });
+
+  //showActionButtonGroup();
+}
+
+//ACTION BUTTON GROUP//////////////
+function showActionButtonGroup()
+{
+  game.add.tween(actionButtonGroup).to({alpha:1, y: 10}, 100, "Sine", true);
+}
+
+function hideActionButtonGroup()
+{
+  game.add.tween(actionButtonGroup).to({alpha:0, y: 100}, 100, "Sine", true);
 }
 
 
@@ -788,14 +867,14 @@ function arrangeCardInSpot(spot, thisSprite, dragSprite)
   var rand = 3 - (Math.random() * 6);
   if(spot.id != 5)
   {
-    thisSprite.y -= 422;
+    thisSprite.y -= 844;
   } else {
-    thisSprite.y += 422;
+    thisSprite.y += 844;
   }
   game.add.tween(thisSprite).to({angle: getSpotRotationAngle(spot),
                                 width:CARD_WIDTH_SM,
                                 height:CARD_HEIGHT_SM}, 250, 'Sine', true);
-  spot.group.add(thisSprite);
+  spot.items.add(thisSprite);
   
 }
 function getSpotRotationAngle(spot)
@@ -931,6 +1010,7 @@ function arrangeCardsInHand()
 function removeCardFromHand(thisSprite, doesOverlapASpot)
 {
 
+  var numCardsInHand = handGroup.length;
   logMessage('Removing card from hand.');
   //if(handGroup.children.includes(thisSprite)) return;
 
@@ -947,7 +1027,8 @@ function removeCardFromHand(thisSprite, doesOverlapASpot)
   logMessage('HAND CARDS!');
   logMessage(table.players[index].handCards);
 
-  arrangeCardsInHand();
+  var cardsShouldBeArranged = !(handGroup.length == numCardsInHand);
+  if(cardsShouldBeArranged) arrangeCardsInHand();
   
   logMessage('card TAKEN FROM hand area');
 
@@ -959,7 +1040,7 @@ function removeCardFromHand(thisSprite, doesOverlapASpot)
 //TEXT/////////////
 function addText(textString, x, y)
 {
-  var style = { font: "bold 16px Arial", fill: "#ffffff", boundsAlignH: "center", boundsAlignV: "middle" };
+  var style = { font: "bold 32px Arial", fill: "#ffffff", boundsAlignH: "center", boundsAlignV: "middle" };
   text = game.add.text(x, y, textString, style);
   text.anchor.set(0.5, .5);
 
@@ -1017,7 +1098,7 @@ function getFullTableLayout()
 
   // Sets the client's username
   function setUsername (name) {
-    username = cleanInput(name.trim());
+    username = cleanInput(name.trim()).split('@')[0];
     
     // If the username is valid
     if (username) {
@@ -1026,7 +1107,7 @@ function getFullTableLayout()
       $loginPage.off('click');
 
       // Tell the server about yourself.
-      player.name = username;
+      player.name = username; //username.split('@')[0];
       player.room = gameRoomFull;
       socket.emit('add user', player);
     }
@@ -1059,7 +1140,7 @@ function getFullTableLayout()
     //check to see which cards are over each player's spot, and add them to their spotCards
     //clear the spot cards to begin with...
     playerSpots.forEach(spot => {
-      spot.group.children.forEach(sprite => {
+      spot.items.children.forEach(sprite => {
         if(sprite.isFaceUp != undefined) //that means it's a card.
         {
           logMessage('compileTable :: adding card to spot. ' + sprite.x + " " + sprite.y + ' || ' + spot.bounds.x + ' ' + spot.bounds.y);
@@ -1144,15 +1225,15 @@ function getFullTableLayout()
           sprite = allCardSprites[card.id];
           if(sprite != undefined)
           {
-            spot.group.add(sprite);
-            spot.group.bringToTop(sprite);
+            spot.items.add(sprite);
+            spot.items.bringToTop(sprite);
             var newY;
             if(spot.id !== 5)
             {
               newY = spot.bounds.y - card.y;
             } else {
               newY = spot.bounds.y + card.y;
-              spot.group.sendToBack(sprite);
+              spot.items.sendToBack(sprite);
             }
             logMessage()
             game.add.tween(sprite).to( {x: ((spot.bounds.width/2) - card.x) + spot.x,
@@ -1162,7 +1243,7 @@ function getFullTableLayout()
                                         angle:getSpotRotationAngle(spot)}, 
                                         animSpeed, "Sine", true);
             sprite.isFaceUp = card.isFaceUp;
-            spot.group.sendToBack(spot.bounds);
+            spot.items.sendToBack(spot.bounds);
             tableizeCard(sprite);
           }
       });
@@ -1187,7 +1268,7 @@ function getFullTableLayout()
                 var xStagger = 3, yStagger = 0, xOffset = 0, yOffset = 0;
                 
                 var handTween = game.add.tween(sprite).to( {x: spot.bounds.x - 70 + (counter * xStagger),
-                                          y: spot.bounds.y + 422,
+                                          y: spot.bounds.y + 844,
                                           width: CARD_WIDTH_TINY,
                                           height:CARD_HEIGHT_TINY,
                                           angle:getSpotRotationAngle(spot)}, 
@@ -1196,7 +1277,7 @@ function getFullTableLayout()
                 handGroup.add(sprite);
                     sprite.input.draggable = false;
                 function checkHand () {
-                  //if(handArea.overlap(sprite) || spot.bounds.overlap(sprite))
+                  //if(handArea.overlap(sprite) || spot.drag_Stop(sprite))
                   //{
                     handGroup.add(sprite);
                     sprite.input.draggable = false;
@@ -1259,7 +1340,7 @@ function getFullTableLayout()
     var allAccountedCardSprites = tableGroup.children;
     //var allCardsSet = new Set(allCardSprites);
     playerSpots.forEach(spot => {
-      allAccountedCardSprites.concat(spot.group.children); 
+      allAccountedCardSprites.concat(spot.items.children); 
     });
     
     allAccountedCardSprites.concat(dragGroup.children);
