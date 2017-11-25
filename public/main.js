@@ -476,8 +476,8 @@ async function card_OnUp(thisSprite) {
 
 //PLAYER SPOT INPUT//////////////////////////
 function playerSpot_OnUp(spotSprite) {
-  openPlayerSpot(spotSprite);
-  bg_Mouse_Up(spotSprite);
+  togglePlayerSpot(spotSprite);
+  handleRectDragComplete();
 }
 function openPlayerSpot(spotSprite)
 {
@@ -762,57 +762,64 @@ function render() {
       });
     });
 
+
   }
 
 function bg_Mouse_Up(){
+  handleRectDragComplete();
+
+  closePlayerSpots();
+  
+}
+
+function handleRectDragComplete()
+{
   rectMouseDown = false;
-
-  if(cardSelectionRect === undefined) return;
-
-  var dragArray = dragGroup.children.slice();
-
-  tableGroup.forEach(function(sprite){
-      if(sprite.overlap(cardSelectionRect))
-      {
-        dragArray.push(sprite);
-        
-      } else {
-        sprite.tint = 0xffffff;
-      }
-  } );
-
-  //account for the playerspots
-  playerSpots.forEach(spot => {
-    spot.items.children.forEach(sprite => {
-      if(sprite.overlap(cardSelectionRect))
-      {
-        dragArray.push(sprite);
-        //tableGroup.add(sprite);
-        sprite.x = sprite.world.x;
-        sprite.y = sprite.world.y;
-      }
+  
+    if(cardSelectionRect === undefined) return;
+  
+    var dragArray = dragGroup.children.slice();
+  
+    tableGroup.forEach(function(sprite){
+        if(sprite.overlap(cardSelectionRect))
+        {
+          dragArray.push(sprite);
+          
+        } else {
+          sprite.tint = 0xffffff;
+        }
+    } );
+  
+    //account for the playerspots
+    playerSpots.forEach(spot => {
+      spot.items.children.forEach(sprite => {
+        if(sprite.overlap(cardSelectionRect))
+        {
+          dragArray.push(sprite);
+          //tableGroup.add(sprite);
+          sprite.x = sprite.world.x;
+          sprite.y = sprite.world.y;
+        }
+      });
     });
-  });
-
-  createDragGroupEffect(dragArray);
-
   
-
-  if(cardSelectionRect)
-  {
-    cardSelectionRect.destroy();
-    cardSelectionRect = undefined;
-  } 
-
-  //if we have selected some cards, time to tell the Server.
-  if(dragGroup.length > 0)
-  {
-    cardSelectionPosition = new Phaser.Point(dragGroup.children[0].x, dragGroup.children[0].y); //track the first cards position to see if it ever changes.
-    showActionButtonGroup();
-    logMessage(username + " selected some cards."); //TODO:SERVER 
-  }
-
+    createDragGroupEffect(dragArray);
   
+    
+  
+    if(cardSelectionRect)
+    {
+      cardSelectionRect.destroy();
+      cardSelectionRect = undefined;
+    } 
+  
+    //if we have selected some cards, time to tell the Server.
+    if(dragGroup.length > 0)
+    {
+      cardSelectionPosition = new Phaser.Point(dragGroup.children[0].x, dragGroup.children[0].y); //track the first cards position to see if it ever changes.
+      showActionButtonGroup();
+      logMessage(username + " selected some cards."); //TODO:SERVER 
+    }
 }
 
 function createDragGroupEffect(dragArray)
@@ -823,6 +830,7 @@ function createDragGroupEffect(dragArray)
     sprite.colorFlash = game.add.tween(sprite).to( { tint: 0xffdd00, height: CARD_HEIGHT_SM*.92, width:CARD_WIDTH_SM*.92}, 250, "Sine", true, 0, -1, true);
   });
 
+  //closePlayerSpots();
   //showActionButtonGroup();
 }
 
