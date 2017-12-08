@@ -83,6 +83,7 @@ playerSpot = {
   id:1,
   x: 336,
   y: -844,
+  playerName: '',
   label: null,
   bounds: null
 }
@@ -92,6 +93,7 @@ playerSpot = {
   id:2,
   x: 672,
   y: -844,
+  playerName: '',
   label: null,
   bounds: null
 }
@@ -101,6 +103,7 @@ playerSpot = {
   id:3,
   x: 1008,
   y: -844,
+  playerName: '',
   label: null,
   bounds: null
 }
@@ -110,6 +113,7 @@ playerSpot = {
   id:4,
   x: 1345,
   y: -844,
+  playerName: '',
   label: null,
   bounds: null
 }
@@ -119,6 +123,7 @@ playerSpot = {
   id:5,
   x: 672,
   y: 1923,
+  playerName: '',
   label: null,
   bounds: null
 }
@@ -231,19 +236,12 @@ for(var i=0; i<playerSpots.length; i++)
   //newSpot.height = (i !== 0 && i !== 4) ? SPOT_HEIGHT : SPOT_WIDTH;
   newSpot.anchor = new Phaser.Point(.5, 0);
   
-  //input for the group...
-  newSpot.inputEnabled = true;
-  newSpot.input.pixelPerfectAlpha = 100;
-  newSpot.input.pixelPerfectClick = true;
-  //newSpot.input.pixelPerfectOver = true;
-  newSpot.events.onInputDown.add(bg_Mouse_Down, this);
-  newSpot.events.onInputUp.add(playerSpot_OnUp);
-
-  //newSpot.label.alpha = .6;
+  
   if(i === 5)
   {
     newSpot.label = addText('', newSpot.x, newSpot.y - newSpot.height + 24);
     newSpot.angle = 180;
+    newSpot.y += 50;
   } else {
     newSpot.label = addText('', newSpot.x, playerSpots[i].y + newSpot.height - 20);
   }
@@ -253,9 +251,10 @@ for(var i=0; i<playerSpots.length; i++)
   playerSpots[i].group.add(newSpot);
   playerSpots[i].group.add(newSpot.label);
   playerSpots[i].items = game.add.group();
-  playerSpots[i].group.add(playerSpots[i].items)
+  playerSpots[i].group.add(playerSpots[i].items);
   spotsGroup.add(playerSpots[i].group);
   playerSpots[i].isHidden = true;
+  newSpot.y -= 50;
 }
 
  
@@ -419,25 +418,25 @@ function shuffle () {
   selectionDidChange = true;
 }
 
-function btnDeal_Up(){
+async function btnDeal_Up(){
   playerSpots.filter(spot => spot.playerName !== '').forEach(spot => {
     //get the top card from the draggroup, and send 1 card to each player
-    for(var i=0; i<3; i++)
+    if(dragGroup.length > 0)
     {
-      if(dragGroup.length > 0)
-      {
-        var topSprite = dragGroup.getTop();
-        game.add.tween(topSprite).to( {x: spot.x + 80,
-                                    y: spot.y + 80,
-                                    angle:getSpotRotationAngle(spot)}, 
-                                    250, "Sine", true);
-        tableGroup.add(topSprite);
-        tableizeCard(topSprite);
-      }
+      let topSprite = dragGroup.getTop();
+      let newY = (spot.id == 5) ? -400 : 400;
+      spot.items.add(topSprite);
+      game.add.tween(topSprite).to( {x: spot.x + 300,
+                                  y: spot.y + newY,
+                                  angle:getSpotRotationAngle(spot)}, 
+                                  250, "Sine", true);
+      arrangeCardInSpot(spot, topSprite);
+      tableizeCard(topSprite);
     }
   });
 
   //SERVER
+  await sleep(300);
   compileTable();
   socket.emit('update table', table);
 }
@@ -517,7 +516,31 @@ function getToggleSpotPosition(spotSprite)
 
   return newY;
 }
-
+function hidePlayerSpot(spotSprite)
+{
+  if(spotSprite.id != 5)
+  {
+    game.add.tween(spotSprite).to({y:-844 - 50}, 100, "Sine", true);
+  } else {
+    game.add.tween(spotSprite).to({y:1923 + 50}, 100, "Sine", true);
+  }
+  spotSprite.inputEnabled = false;
+  
+}
+function showPlayerSpot(spotSprite)
+{
+  if(spotSprite.id != 5)
+  {
+    game.add.tween(spotSprite).to({y:-844}, 100, "Sine", true);
+  } else {
+    game.add.tween(spotSprite).to({y:1923}, 100, "Sine", true);
+  }
+  spotSprite.inputEnabled = true;
+  spotSprite.input.pixelPerfectAlpha = 100;
+  spotSprite.input.pixelPerfectClick = true;
+  spotSprite.events.onInputDown.add(bg_Mouse_Down, this);
+  spotSprite.events.onInputUp.add(playerSpot_OnUp);
+}
 
 
 
@@ -539,7 +562,7 @@ function dragUpdate(thisSprite, pointer, dragX, dragY, snapPoint) {
   //are we dragging the drag group over the playerspots?
   playerSpots.forEach(spot => {
     //closePlayerSpots(spot);
-    if(spot.bounds.overlap(thisSprite))
+    if(spot.bounds.inputEnabled && spot.bounds.overlap(thisSprite))
     {
       openPlayerSpot(spot.bounds);
     }
@@ -1320,8 +1343,9 @@ function getFullTableLayout()
     flipCard(sprite);
   }
 
-  function updateLabels()
+  async function updateLabels()
   {
+    await sleep(1000); //HACK... the lable objects need to exist before we can set them.
     logMessage('updating names');
     logMessage(table.players.find(x => x.name === username));
     var thisPlayersSpot = table.players.find(x => x.name === username).spot - 1;
@@ -1329,6 +1353,7 @@ function getFullTableLayout()
     playerSpots.forEach(spot => {
       spot.label.setText('');
       spot.playerName = '';
+      hidePlayerSpot(spot.bounds);
     });
     table.players.forEach(function(player){
       var spotPos = (player.spot - 1) + shiftVal;
@@ -1337,6 +1362,7 @@ function getFullTableLayout()
       var spot = playerSpots[spotPos];
       spot.label.setText(player.name);
       spot.playerName = player.name;
+      showPlayerSpot(spot.bounds);
     });
   }
 
@@ -1358,6 +1384,7 @@ function getFullTableLayout()
     var accountedForSet = new Set(allAccountedCardSprites);
     var lostCards = allCardSprites.reduce(function(foundCards, sprite)
     {
+      tableGroup.add(sprite);
       if(!accountedForSet.has(sprite))
       {
         return foundCards.concat([sprite]);
@@ -1373,7 +1400,6 @@ function getFullTableLayout()
                                   250, "Sine", true);
       rotateCard(sprite, 0);
       tableizeCard(sprite);
-      tableGroup.add(sprite);
       sprite.isFaceUp = true;
       flipCard(sprite);
     });
@@ -1666,11 +1692,10 @@ function generateGameRoomId()
 }
 
 function copyToClipboard(text) {
-  alert(text);
+  alert("Copied the URL to the clip board :)");
   var $temp = $("<input type='text' value='" + text + "'></input>");
   $("body").append($temp);
   $temp.select();
-  alert($temp.val());
   document.execCommand("copy");
   $temp.remove();
 }
